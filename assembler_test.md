@@ -1,6 +1,6 @@
 ##this is a markdown file
 
-# Test the assemblers for wetland dataset
+# Test the assembly tools for wetland dataset
 
 > sources of errors
 1. result in a highly non-uniform read coverage across different genomes ()
@@ -86,5 +86,11 @@ contigs, covering just ≈26% of the total length of the TSLR assembly (best res
 1.Utilizing strain differences for repeat resolution in metaSPAdes. 
 
 
+```
+cd /vol/spool/workdir/assembly/
 
+qsub -cwd -pe multislot 14 -N metaspades -b y \
+/usr/local/lib/SPAdes-3.11.1-Linux/bin/metaspades.py -o metaspades_out --pe1-1 read1.fq --pe1-2 read2.fq
+
+```
     
