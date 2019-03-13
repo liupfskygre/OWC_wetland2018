@@ -74,4 +74,17 @@ contigs, covering just ≈26% of the total length of the TSLR assembly (best res
 
 # methods section of metaSPAdes
 1. Detecting and masking strain variations. 
-    1. k-mers
+    1.  “bulges” and “tips” 
+
+1. Analyzing filigree edges in the assembly graph.
+    1. , k-mers, vertices
+
+1. Repeat resolution with exSPAnder. 
+
+1. **A new metagenomic decision rule in metaSPAdes.
+
+1.Utilizing strain differences for repeat resolution in metaSPAdes. 
+
+
+
+    
