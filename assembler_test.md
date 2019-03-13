@@ -86,6 +86,9 @@ contigs, covering just ≈26% of the total length of the TSLR assembly (best res
 1.Utilizing strain differences for repeat resolution in metaSPAdes. 
 
 
+
+# command example for metaSPAdes
+#https://denbi-openstack-metagenomics-workshop.readthedocs.io/en/latest/assembly/metaspades.html
 ```
 cd /vol/spool/workdir/assembly/
 
