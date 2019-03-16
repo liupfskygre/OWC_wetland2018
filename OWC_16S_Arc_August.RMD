@@ -1,0 +1,129 @@
+#library
+```{r}
+library(phyloseq)
+library(ggplot2)
+library(RColorBrewer)
+```
+
+```{r}
+setwd("~/A_Wrighton_lab/Wetland_project/16SrRNA_ana_Adrienne")
+```
+
+# mapping file
+map_file_clean_Cores.txt
+# ASV file, 
+feature_table_w_tax_clean_Cores_ge10.txt
+# in bash
+sed -e '1s/\./-/g' feature_table_w_tax_clean_Cores_ge10.txt >feature_table_w_tax_clean_Cores_ge10f.txt
+
+# tax file
+filtered_ge10_trimmed_tax_tab.txt
+
+# read file
+```{r}
+map_file<-read.delim("map_file_clean_Cores.txt",header=T,row.names=1)
+
+otus<-read.delim("feature_table_w_tax_clean_Cores_ge10f.txt",header=T,row.names=1, check.names=FALSE) 
+
+taxa<-read.delim("filtered_ge10_trimmed_tax_tab.txt",header = T,row.names = 1) #tax_info, 
+
+```
+
+# add eco_dep column in the mapping file
+```{r}
+library(tidyr)
+map_file$ecosite1=gsub("1|2|3","",map_file$ecosite)
+map_file = unite(map_file, eco_dep, c(ecosite1, depth), remove=FALSE)
+map_file = map_file[order(map_file$eco_dep), ,drop=FALSE] #M (D1-D6), N, OW, T is the order
+```
+
+#color code setup
+```{r}
+library(RColorBrewer)
+bluepal<-brewer.pal(6,"Blues") #open water
+orangepal<-brewer.pal(6,"Oranges") # mud
+greenpal1<-brewer.pal(6,"Greens") # Typha
+greenpal2<-brewer.pal(6,"YlGn") # Nelumbo
+pal<-c(orangepal[4], orangepal[5], orangepal[6], greenpal1[2], greenpal1[3], greenpal1[4], bluepal[4], bluepal[5], bluepal[6], greenpal2[6])
+
+
+```
+# taxmat
+```{r}
+taxmat<-as.matrix(taxa)
+TAX = tax_table(taxmat) #covert to phyoseq object, OTU table
+```
+
+
+# August data selction
+```{r}
+map_file <- map_file[grep("Aug-|Aug_", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus <- otus[, grep("Aug-|Aug_", colnames(otus), ignore.case=TRUE, invert=FALSE)]
+```
+
+# August-D1 selction, move to  phyloseq section after data selection
+```{r}
+map_file_D <- map_file[grep("-D1-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- otus[, grep("-D1-", colnames(otus), ignore.case=TRUE, invert=FALSE)]
+```
+
+
+# August-D2 selction, move to  phyloseq section after data selection
+```{r}
+map_file_D <- map_file[grep("-D2-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- otus[, grep("-D2-", colnames(otus), ignore.case=TRUE, invert=FALSE)]
+```
+
+# August-D3 selction, move to  phyloseq section after data selection
+```{r}
+map_file_D <- map_file[grep("-D3-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- otus[, grep("-D3-", colnames(otus), ignore.case=TRUE, invert=FALSE)]
+```
+
+# August-D4 selction
+```{r}
+map_file_D <- map_file[grep("-D4-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- otus[, grep("-D4-", colnames(otus), ignore.case=TRUE, invert=FALSE)]
+```
+
+# August-D5 selction
+```{r}
+map_file_D <- map_file[grep("-D5-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- otus[, grep("-D5-", colnames(otus), ignore.case=TRUE, invert=FALSE)]
+```
+
+# August-D6 selction, move to  phyloseq section after data selection
+```{r}
+map_file_D <- map_file[grep("-D6-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- otus[, grep("-D6-", colnames(otus), ignore.case=TRUE, invert=FALSE)]
+```
+# move to  phyloseq section after data selection
+
+
+# phyloseq section and plot
+# 
+# otu
+```{r}
+otumat<-as.matrix(otus_D)
+OTU = otu_table(otumat, taxa_are_rows = TRUE)
+physeq<-phyloseq(OTU,TAX) 
+
+sampledata<-sample_data(map_file_D)
+mgd<-merge_phyloseq(physeq,sampledata)
+```
+
+#plot
+
+```{r}
+mgd.ord <- ordinate(mgd, "NMDS", "bray")
+```
+
+```{r}
+theme_set(theme_bw())
+pmds=plot_ordination(mgd, mgd.ord, color="ecosite", shape="depth") #
+pmds=pmds + geom_point(size=1.5)+scale_color_manual(values=pal) #
+pmds
+```
+
+```{r}
+```
