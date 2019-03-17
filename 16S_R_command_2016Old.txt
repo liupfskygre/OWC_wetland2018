@@ -1,0 +1,328 @@
+0, formate change of the tax file
+python taxonomy_table_gen.py  ### produced 1871A_16SQiiSeqsOTUs_tax_Mv1.txt
+sed -i -e 's/"//g' 1871A_16SQiiSeqsOTUs_tax_Mv1.txt
+sed -i -e 's/;size=[0-9]*;//g' 1871A_16SQiiSeqsOTUs_tax_Mv1.txt
+sed 's/([^(^)]*)//g' 1871A_16SQiiSeqsOTUs_tax_Mv1.txt>1871A_16SQiiSeqsOTUs_tax_Mv2.txt # replace content in () one 
+sed -i -e 's/\w:\b//g' 1871A_16SQiiSeqsOTUs_tax_Mv2.txt # delete d:, p: 
+
+
+1, 16S bacteria and archaea seperate
+cat 1871A_16SQiiSeqsOTUs_tax_Mv2.txt| grep 'Archaea'> 1871A_16SQiime_Archaea_tax.txt
+cat 1871A_16SQiiSeqsOTUs_tax_Mv2.txt| grep 'Bacteria'> 1871A_16SQiime_Bacteria_tax.txt
+
+awk '{print $1}' 1871A_16SQiime_Archaea_tax.txt>archaea_otu_name.txt  #get OTU_name 
+python OTU_table_separate.py
+
+2016-02-21
+awk '{print $1}' 1871A_16SQiiSeqsOTUs_OTUtable97.txt>1871A_16SQiiSeqsOTUs_otu_name.txt  #get OTU_name
+python OTU_table_separate.py ##change the internal name of OTU_table_separate.py
+
+##import data into R
+
+###taxonomy data
+Taxo16S <- read.delim("/media/TE/1871A/1871A_proReads/Split_1871A16S_Output/1871A_16SQiiSeqsOTUs_tax_Match.txt")
+View(Taxo16S)
+###OTU table data
+OTU_16S <- read.delim("/media/TE/1871A/1871A_proReads/Split_1871A16S_Output/1871A_16SQiiSeqsOTUs_OTUtable97.txt")
+View(OTU_16S)
+
+row.names(Taxo16S)=Taxo16S[,1]
+Taxo16S=Taxo16S[,-1]
+
+row.names(OTU_16S)=OTU_16S[,1]
+OTU_16S=OTU_16S[,-1]
+
+require(gtools) 
+OTU_16S=OTU_16S[, mixedorder(colnames(OTU_16S[1:54]))]
+OTU_Tax16S=merge(OTU_16S,Taxo16S,by='row.names',sort=F)
+write.table(OTU_Tax16S, file="OTU_Tax_16SQiime.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+OTU_Tax16SREab=merge(OTU_16SREab,Taxo16S,by='row.names',sort=F)
+OTU_16SREab=sweep(OTU_16S[,1:54], 2, colSums(OTU_16S[,1:54]), FUN="/")
+write.table(OTU_Tax16SREab, file="OTU_Tax16SQiime_REab.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+Dom=aggregate(x=OTU_Tax16SREab[,2:55],by=list(OTU_Tax16SREab$Domain),FUN='sum')
+Phylum=aggregate(x=OTU_Tax16SREab[,2:55],by=list(OTU_Tax16SREab$Phylum),FUN='sum')
+
+write.table(Dom, file="Domain_16SQiimeReab.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+write.table(Phylum, file="Phylum_16SQiimeReab.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+library(ggplot2)
+library(reshape2)
+Dom_melt=melt(Dom)
+Phylum_melt=melt(Phylum)
+
+gp=ggplot(Dom_melt,aes(x=variable,y=value,fill=Group.1))+geom_bar()
+gp_phylum=ggplot(Phylum_melt,aes(x=variable,y=value,fill=Group.1))+geom_bar()
+
+treat= factor(rep(seq(1,18),1, each=3))########
+
+DomT=as.data.frame(t(Dom))
+DomT$treat=treat
+Archaea_mean=aggregate(x=DomT$Archaea,by=list(DomT$treat),mean)
+Archaea_std=aggregate(x=DomT$Archaea,by=list(DomT$treat),sd)
+archaea=merge(Archaea_mean,Archaea_std,by='Group.1',sort=F)
+colnames(archaea)=c('Tre',"mean","sd")
+gp=ggplot(archaea, aes(x=Tre,y=mean))+geom_bar(fill=Tre)
+
+###work separate on bacteria and archaea
+
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>bacteria>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+>>>>>>>>>>>>>>>>>>>>>>>>>>>>OTU_Tax_16SQiime.txt>>>>>>>>>Bac_OTU_Tax_16SQiime.txt
+cat OTU_Tax_16SQiime.txt|grep 'Bacteria'>Bac_OTU_Tax_16SQiime.txt
+
+Bac <- read.delim("/media/TE/1871A/1871A_proReads/Split_1871A16S_Output/Bac_OTU_Tax_16SQiime.txt")
+Bac_ReAb=as.data.frame(sweep(Bac[,2:55], 2, colSums(Bac[,2:55]), FUN="/"))
+Bac_ReAb[,55:60]=Bac[,56:61]
+row.names(Bac_ReAb)=Bac[,1]
+
+Bac_Phylum=aggregate(x=Bac_ReAb[,1:54],by=list(Bac_ReAb$Phylum),sum)
+write.table(Bac_Phylum, file="Bac_Phylum_16SQiime.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+Bac_Class=aggregate(x=Bac_ReAb[,1:54],by=list(Bac_ReAb$Class),sum)
+write.table(Bac_Class, file="Bac_Class_16SQiime.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+Bac_Order=aggregate(x=Bac_ReAb[,1:54],by=list(Bac_ReAb$Order),sum)
+ write.table(Bac_Order, file="Bac_Order_16SQiime.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+View(Bac_Order)
+Bac_Family=aggregate(x=Bac_ReAb[,1:54],by=list(Bac_ReAb$Family),sum)
+View(Bac_Family)
+ write.table(Bac_Family, file="Bac_Family_16SQiime.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+ ###Bacteria of vercelli 
+Bac_ReAb_vercelli_16SQiime <- read.delim("H:/1871A/1871A_proReads/Split_1871A16S_Output/Vercelli_bacteria/Bac_ReAb_vercelli_16SQiime.txt")
+Bac_Ver=Bac_ReAb_vercelli_16SQiime
+#phylum
+
+Bac_RA_Ver_Phylum=aggregate(x=Bac_Ver[,1:27],by=list(Bac_Ver$Phylum),sum)
+write.table(Bac_RA_Ver_Phylum, file="Bac_RA_Ver_Phylum.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+Bac_RA_Ver_Class=aggregate(x=Bac_Ver[,1:27],by=list(Bac_Ver$Class),sum)
+write.table(Bac_RA_Ver_Class, file="Bac_RA_Ver_Class.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+
+Bac_RA_Ver_Order=aggregate(x=Bac_Ver[,1:27],by=list(Bac_Ver$Order),sum)
+write.table(Bac_RA_Ver_Order, file="Bac_RA_Ver_Order.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+Bac_RA_Ver_Family=aggregate(x=Bac_Ver[,1:27],by=list(Bac_Ver$Family),sum)
+write.table(Bac_RA_Ver_Family, file="Bac_RA_Ver_Family.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+Bac_RA_Ver_Genus=aggregate(x=Bac_Ver[,1:27],by=list(Bac_Ver$Genus),sum)
+write.table(Bac_RA_Ver_Genus, file="Bac_RA_Ver_Genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+ 
+ 
+>>>>>>>>>>>>>>>>.relatvie abundance all
+###Bacteria of Phillipine 
+Bac_p <- read.delim("E:/1871A/1871A_proReads/Split_1871A16S_Output/Phillipines_bacteria/Bac_ReAb_Phillipine_16SQiime.txt")
+
+#phylum
+
+Bac_RA_Phi_Phylum=aggregate(x=Bac_p[,1:27],by=list(Bac_p$Phylum),sum)
+write.table(Bac_RA_Phi_Phylum, file="Bac_RA_Phi_Phylum.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+Bac_RA_Phi_Order=aggregate(x=Bac_p[,1:27],by=list(Bac_p$Order),sum)
+write.table(Bac_RA_Phi_Order, file="Bac_RA_Phi_Order.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+
+
+
+>>>>>>>>>>>>>>>>.relatvie abundance above 1%
+##get relative abundance above 1% otus
+###Bacteria of vercelli
+Bac_ReAb_ver=Bac_ReAb[,28:60]
+write.table(Bac_ReAb_ver, file="Bac_ReAb_vercelli_16SQiime.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+Bac_ReAb_Ver1p=data.frame()
+for (i in 1:dim(Bac_ReAb_ver)[1]){if(max(Bac_ReAb_ver[i,1:27]>0.01)){Bac_ReAb_Ver1p=rbind(Bac_ReAb_Ver1p,Bac_ReAb_ver[i,])}}
+write.table(Bac_ReAb_Ver1p, file="Bac_ReAb_VercelliQ1p.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+#phylum
+Bac_ReAb_Ver1p_Phylum=aggregate(x=Bac_ReAb_Ver1p[,1:27],by=list(Bac_ReAb_Ver1p$Phylum),sum)
+write.table(Bac_ReAb_Ver1p_Phylum, file="Bac_ReAb_Ver1p_Phylum.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+#class
+
+#genus
+Bac_ReAb_Ver1p_Genus=aggregate(x=Bac_ReAb_Ver1p[,1:27],by=list(Bac_ReAb_Ver1p$Genus),sum)
+write.table(Bac_ReAb_Ver1p_Genus, file="Bac_ReAb_Ver1p_Genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+>>>>>>>>>>>>>>>>.relatvie abundance above 1%  2015-02-23
+##get relative abundance above 1% otus
+###Bacteria of Phillipine
+Bac <- read.delim("E:/1871A/1871A_proReads/Split_1871A16S_Output/Bac_OTU_Tax_16SQiime.txt")
+Bac_ReAb=as.data.frame(sweep(Bac[,2:55], 2, colSums(Bac[,2:55]), FUN="/"))
+Bac_ReAb[,55:60]=Bac[,56:61]
+row.names(Bac_ReAb)=Bac[,1]
+Bac_ReAb_Phill=Bac_ReAb[,1:27]
+Bac_ReAb_Phill[,28:33]=Bac[,56:61]
+write.table(Bac_ReAb_Phill, file="Bac_ReAb_Phillipine_16SQiime.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+Bac_ReAb_Phill1p=data.frame()
+for (i in 1:dim(Bac_ReAb_Phill)[1]){if(max(Bac_ReAb_Phill[i,1:27]>0.01)){Bac_ReAb_Phill1p=rbind(Bac_ReAb_Phill1p,Bac_ReAb_Phill[i,])}}
+write.table(Bac_ReAb_Phill1p, file="Bac_ReAb_PhillQ1p.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+#phylum
+Bac_ReAb_Phill1p_phylum=aggregate(x=Bac_ReAb_Phill1p[,1:27],by=list(Bac_ReAb_Phill1p$Phylum),sum)
+write.table(Bac_ReAb_Phill1p_phylum, file="Bac_ReAb_Phill1p_phylum.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+#class
+Bac_ReAb_Phill1p_Class=aggregate(x=Bac_ReAb_Phill1p[,1:27],by=list(Bac_ReAb_Phill1p$Class),sum)
+write.table(Bac_ReAb_Phill1p_Class, file="Bac_ReAb_Phill1p_Class.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+#order
+Bac_ReAb_Phill1p_Order=aggregate(x=Bac_ReAb_Phill1p[,1:27],by=list(Bac_ReAb_Phill1p$Order),sum)
+write.table(Bac_ReAb_Phill1p_Order, file="Bac_ReAb_Phill1p_Order.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+#family
+Bac_ReAb_Phill1p_Family=aggregate(x=Bac_ReAb_Phill1p[,1:27],by=list(Bac_ReAb_Phill1p$Family),sum)
+write.table(Bac_ReAb_Phill1p_Family, file="Bac_ReAb_Phill1p_Family.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+#genus
+Bac_ReAb_Phill1p_Genus=aggregate(x=Bac_ReAb_Phill1p[,1:27],by=list(Bac_ReAb_Phill1p$Genus),sum)
+write.table(Bac_ReAb_Phill1p_Genus, file="Bac_ReAb_Phill1p_Genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+###############relatvie abundance above 0.1%
+##get relative abundance above 0.1% otus
+###Bacteria of vercelli 1t
+
+Bac_ReAb_Ver1t=data.frame()
+for (i in 1:dim(Bac_ReAb_ver)[1]){if(max(Bac_ReAb_ver[i,1:27]>0.001)){Bac_ReAb_Ver1p=rbind(Bac_ReAb_Ver1t,Bac_ReAb_ver[i,])}}
+write.table(Bac_ReAb_Ver1t, file="Bac_ReAb_VercelliQ1t.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+#phylum
+Bac_ReAb_Ver1t_Phylum=aggregate(x=Bac_ReAb_Ver1t[,1:27],by=list(Bac_ReAb_Ver1t$Phylum),sum)
+write.table(Bac_ReAb_Ver1t_Phylum, file="Bac_ReAb_Ver1t_Phylum.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+#Class
+Bac_ReAb_Ver1t_Class=aggregate(x=Bac_ReAb_Ver1t[,1:27],by=list(Bac_ReAb_Ver1t$Class),sum)
+write.table(Bac_ReAb_Ver1t_Class, file="Bac_ReAb_Ver1t_Class.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+#order
+Bac_ReAb_Ver1t_Order=aggregate(x=Bac_ReAb_Ver1t[,1:27],by=list(Bac_ReAb_Ver1t$Order),sum)
+write.table(Bac_ReAb_Ver1t_Order, file="Bac_ReAb_Ver1t_Order.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+#Family
+Bac_ReAb_Ver1t_Family=aggregate(x=Bac_ReAb_Ver1t[,1:27],by=list(Bac_ReAb_Ver1t$Family),sum)
+write.table(Bac_ReAb_Ver1t_Family, file="Bac_ReAb_Ver1t_Family.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+#Genus
+Bac_ReAb_Ver1t_Genus=aggregate(x=Bac_ReAb_Ver1t[,1:27],by=list(Bac_ReAb_Ver1t$Genus),sum)
+write.table(Bac_ReAb_Ver1t_Genus, file="Bac_ReAb_Ver1t_Genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+###############order with all otus###########2016-02-24
+#####Order level
+############## vercelli soil
+according to d$Team2 <- factor(d$Team1, as.character(d$Team1))
+change the order of legend
+Vercelli_bac_ggplot2_Family$Order1 <- factor(Vercelli_bac_ggplot2_Family$Order, as.character(Vercelli_bac_ggplot2_Family$Order))
+
+legend.position='bottom'
+nrow = 3,
+coord_cartesian
+####vercelli--order
+gb=ggplot(Vercelli_bac_ggplot2_Family,aes(x=Treatment,y=RA,fill=Order1)) + geom_bar(stat="identity", width=0.7) +scale_fill_manual(values=alpha(c('red','orange','gray48','aquamarine3','brown','cyan','blue4','indianred2','blueviolet','green','orchid','plum','skyblue','yellow','springgreen4','grey11','salmon','khaki3','slateblue3','gold','blueviolet'))) +geom_segment(aes(xend = Treatment,y = ystart,yend = yend),size = 1) + geom_point(aes(x = Treatment,y = yend),shape = "|",show_guide = FALSE,size=6)  +theme_bw()+coord_cartesian(ylim=c(0,1.00))+scale_y_continuous(labels=percent, breaks = seq(0, 1.00, by = 0.10))+theme(axis.text=element_text(size=20),axis.title=element_text(size=20),legend.text=element_text(size=20),legend.title=element_text(size=20),legend.key.height=unit(0.8,'cm') )+guides(fill = guide_legend(title.position = "top",title='Order'))+ coord_flip() 
+ggsave (file='vercelli_Bacall_Order_RA.tiff', plot=gb,dpi=300,unit=c('cm'),width = 40, height = 20, compression="lzw")
+
+####philline--order
+gb=ggplot(Vercelli_bac_ggplot2_Family,aes(x=Treatment,y=RA,fill=Order1)) + geom_bar(stat="identity", width=0.7) +scale_fill_manual(values=alpha(c('red','orange','gray48','aquamarine3','brown','cyan','blue4','indianred2','blueviolet','green','orchid','plum','skyblue','yellow','springgreen4','grey11','salmon','khaki3','gold','blueviolet'))) +geom_segment(aes(xend = Treatment,y = ystart,yend = yend),size = 1) + geom_point(aes(x = Treatment,y = yend),shape = "|",show_guide = FALSE,size=6)  +theme_bw()+coord_cartesian(ylim=c(0,1.00))+scale_y_continuous(labels=percent, breaks = seq(0, 1.00, by = 0.10))+theme(axis.text=element_text(size=20),axis.title=element_text(size=20),legend.text=element_text(size=20),legend.title=element_text(size=20),legend.key.height=unit(0.8,'cm') )+guides(fill = guide_legend(title.position = "top",title='Order'))+ coord_flip() 
+ggsave (file='Phillipine_Bacall_Order_RA.tiff', plot=gb,dpi=300,unit=c('cm'),width = 40, height = 20, compression="lzw")
+
+
+####Phillipine--order--syntrophobacterales
+Bac_RA_P <- read.delim("E:/1871A/1871A_proReads/Split_1871A16S_Output/Phillipines_bacteria/Bac_ReAb_Phillipine_16SQiime.txt")
+Bac_RA_P_syntrophbacterales=Bac_RA_P[Bac_RA_P$Order=='Syntrophobacterales',]
+write.table(Bac_RA_P_syntrophbacterales, file="Bac_RA_P_syntrophbacterales.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+P_syntrophbacterales_genus=aggregate(x=Bac_RA_P_syntrophbacterales[,1:27],by=list(Bac_RA_P_syntrophbacterales$Genus),sum)
+write.table(P_syntrophbacterales_genus, file="P_syntrophbacterales_genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+P_syntrophbacterales_Family=aggregate(x=Bac_RA_P_syntrophbacterales[,1:27],by=list(Bac_RA_P_syntrophbacterales$Family),sum)
+write.table(P_syntrophbacterales_Family, file="P_syntrophbacterales_Family.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+####Phillipine--order--Clostridiales
+Bac_RA_P_Clostridiales=Bac_RA_P[Bac_RA_P$Order=='Clostridiales',]
+write.table(Bac_RA_P_Clostridiales, file="Bac_RA_P_Clostridiales.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+Bac_RA_P_Clostridiales=Bac_RA_P[Bac_RA_P$Order=='Clostridiales',]
+P_Clostridiales_genus=aggregate(x=Bac_RA_P_Clostridiales[,1:27],by=list(Bac_RA_P_Clostridiales$Genus),sum)
+write.table(P_Clostridiales_genus, file="P_Clostridiales_genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+####Phillipine--order--Ignavibacteriales
+Bac_RA_P_Ignavibacteriales=Bac_RA_P[Bac_RA_P$Order=='Ignavibacteriales',]
+P_Ignavibacteriales_genus=aggregate(x=Bac_RA_P_Ignavibacteriales[,2:28],by=list(Bac_RA_P_Ignavibacteriales$Genus),sum)
+write.table(P_Ignavibacteriales_genus, file="P_Ignavibacteriales_genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+####Phillipine--order--Anaerolineales
+Bac_RA_P_Anaerolineales=Bac_RA_P[Bac_RA_P$Order=='Anaerolineales',]
+P_Anaerolineales_genus=aggregate(x=Bac_RA_P_Anaerolineales[,2:28],by=list(Bac_RA_P_Anaerolineales$Genus),sum)
+write.table(P_Anaerolineales_genus, file="P_Anaerolineales_genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+####Phillipine--order--Bacillales
+Bac_RA_P_Bacillales=Bac_RA_P[Bac_RA_P$Order=='Bacillales',]
+P_Bacillales_genus=aggregate(x=Bac_RA_P_Bacillales[,2:28],by=list(Bac_RA_P_Bacillales$Genus),sum)
+write.table(P_Bacillales_genus, file="P_Bacillales_genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+####Phillipine--order--Bacteroidales
+Bac_RA_P_Bacteroidales=Bac_RA_P[Bac_RA_P$Order=='Bacteroidales',]
+P_Bacteroidales_genus=aggregate(x=Bac_RA_P_Bacteroidales[,2:28],by=list(Bac_RA_P_Bacteroidales$Genus),sum)
+write.table(P_Bacteroidales_genus, file="P_Bacteroidales_genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+####Phillipine--order--Selenomonadales
+Bac_RA_P_Selenomonadales=Bac_RA_P[Bac_RA_P$Order=='Selenomonadales',]
+P_Selenomonadales_genus=aggregate(x=Bac_RA_P_Selenomonadales[,2:28],by=list(Bac_RA_P_Selenomonadales$Genus),sum)
+write.table(P_Selenomonadales_genus, file="P_Selenomonadales_genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+####Phillipine--order--Rhizobiales
+Bac_RA_P_Rhizobiales=Bac_RA_P[Bac_RA_P$Order=='Rhizobiales',]
+P_Rhizobiales_genus=aggregate(x=Bac_RA_P_Rhizobiales[,2:28],by=list(Bac_RA_P_Rhizobiales$Genus),sum)
+write.table(P_Rhizobiales_genus, file="P_Rhizobiales_genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+####Phillipine--order--Sphingobacteriales
+Bac_RA_P_Sphingobacteriales=Bac_RA_P[Bac_RA_P$Order=='Sphingobacteriales',]
+P_Sphingobacteriales_genus=aggregate(x=Bac_RA_P_Sphingobacteriales[,2:28],by=list(Bac_RA_P_Sphingobacteriales$Genus),sum)
+write.table(P_Sphingobacteriales_genus, file="P_Sphingobacteriales_genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+####Phillipine--order--Myxococcales
+Bac_RA_P_Myxococcales=Bac_RA_P[Bac_RA_P$Order=='Myxococcales',]
+P_Myxococcales_genus=aggregate(x=Bac_RA_P_Myxococcales[,2:28],by=list(Bac_RA_P_Myxococcales$Genus),sum)
+write.table(P_Myxococcales_genus, file="P_Myxococcales_genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+####Phillipine--order--Gaiellales
+Bac_RA_P_Gaiellales=Bac_RA_P[Bac_RA_P$Order=='Gaiellales',]
+P_Gaiellales_genus=aggregate(x=Bac_RA_P_Gaiellales[,2:28],by=list(Bac_RA_P_Gaiellales$Genus),sum)
+write.table(P_Gaiellales_genus, file="P_Gaiellales_genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+####Phillipine--order--Caldilineales
+Bac_RA_P_Caldilineales=Bac_RA_P[Bac_RA_P$Order=='Caldilineales',]
+P_Caldilineales_genus=aggregate(x=Bac_RA_P_Caldilineales[,2:28],by=list(Bac_RA_P_Caldilineales$Genus),sum)
+write.table(P_Caldilineales_genus, file="P_Caldilineales_genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+####Phillipine--order--Rhodocyclales
+Bac_RA_P_Rhodocyclales=Bac_RA_P[Bac_RA_P$Order=='Rhodocyclales',]
+P_Rhodocyclales_genus=aggregate(x=Bac_RA_P_Rhodocyclales[,2:28],by=list(Bac_RA_P_Rhodocyclales$Genus),sum)
+write.table(P_Rhodocyclales_genus, file="P_Rhodocyclales_genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+####Phillipine--order--Desulfobacterales
+Bac_RA_P_Desulfobacterales=Bac_RA_P[Bac_RA_P$Order=='Desulfobacterales',]
+P_Desulfobacterales_genus=aggregate(x=Bac_RA_P_Desulfobacterales[,2:28],by=list(Bac_RA_P_Desulfobacterales$Genus),sum)
+write.table(P_Desulfobacterales_genus, file="P_Desulfobacterales_genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+####Phillipine--order--Desulfovibrionales
+Bac_RA_P_Desulfovibrionales=Bac_RA_P[Bac_RA_P$Order=='Desulfovibrionales',]
+P_Desulfovibrionales_genus=aggregate(x=Bac_RA_P_Desulfovibrionales[,2:28],by=list(Bac_RA_P_Desulfovibrionales$Genus),sum)
+write.table(P_Desulfovibrionales_genus, file="P_Desulfovibrionales_genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+####Phillipine--order--Desulfuromonadales
+Bac_RA_P_Desulfuromonadales=Bac_RA_P[Bac_RA_P$Order=='Desulfuromonadales',]
+P_Desulfuromonadales_genus=aggregate(x=Bac_RA_P_Desulfuromonadales[,2:28],by=list(Bac_RA_P_Desulfuromonadales$Genus),sum)
+write.table(P_Desulfuromonadales_genus, file="P_Desulfuromonadales_genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+####Phillipine--order--Solirubrobacterales
+Bac_RA_P_Solirubrobacterales=Bac_RA_P[Bac_RA_P$Order=='Solirubrobacterales',]
+P_Solirubrobacterales_genus=aggregate(x=Bac_RA_P_Solirubrobacterales[,2:28],by=list(Bac_RA_P_Solirubrobacterales$Genus),sum)
+write.table(P_Solirubrobacterales_genus, file="P_Solirubrobacterales_genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
+####Phillipine--order--Planctomycetales
+Bac_RA_P_Planctomycetales=Bac_RA_P[Bac_RA_P$Order=='Planctomycetales',]
+P_Planctomycetales_genus=aggregate(x=Bac_RA_P_Planctomycetales[,2:28],by=list(Bac_RA_P_Planctomycetales$Genus),sum)
+write.table(P_Planctomycetales_genus, file="P_Planctomycetales_genus.txt",sep = "\t",row.names=T,col.names=NA,quote=F)
+
