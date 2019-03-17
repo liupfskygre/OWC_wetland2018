@@ -1,0 +1,5 @@
+Sample Id	Density
+pHAGD7_f2	Heavy
+pHAGD7_f3	Heavy
+pHAGD7_f7	Light
+pHAGD7_f8	Light

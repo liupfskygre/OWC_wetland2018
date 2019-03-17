@@ -1,0 +1,43 @@
+
+# cd 
+# data preparation
+# profile data (UTF-8)
+# genus name to just keep family and genus
+#AGexp_16SBac_genus_counts_SIP.csv delete all transition fractions, keep just two heavy and two light fractions for all samples
+
+sed  -e 's/^Bacteria;//g' AGexp_16SBac_genus_counts_SIP.csv>AGexp_16SBac_genus_counts_SIP_2.csv
+sed  -i -e 's/^.*;\(.*;.*\)/\1/g' AGexp_16SBac_genus_counts_SIP_2.csv
+
+
+# inlcude metafile to have groups (like pHAGD7H, pHAGD7L) and try on two groups t-test for each samples
+
+# two heavy fraction and two light fractions were added to fit fisher's exact test # AGexp_16SBac_genus_counts_SIP_HLsum.txt
+# column names like pHAGD7H, pHAGD7L were used to assign average from different samples
+## rename these before :  uncultured_fa;uncultured_ge
+uncultured;
+Unknown_Family
+
+## unclassified--> uncla.
+## uncultured--> uncul
+
+sed  -e 's/^Bacteria;//g' AGexp_16SBac_genus_counts_SIP_HLsum.txt > AGexp_16SBac_genus_counts_SIP_HLsum2.txt
+sed  -i -e 's/^.*;\(.*;.*\)/\1/g' AGexp_16SBac_genus_counts_SIP_HLsum2.txt
+
+
+call STAMP (this version used because it requirs less on file formate) 
+python stamp.py
+
+# load profile data and/or metadata file
+
+AGexp_16SBac_genus_counts_SIP_HLsum2.txt
+
+#paratermeter for fisher test
+two samples
+Fisher’s exact test 
+Two-sided
+CI Method,DP: Asymptotic, 0.95
+Multiple test correction methods: Benjamini-Hochberg FDR
+Filtering: q-value 0.05
+effect size filter1, DP deference between propiotions
+effect size (0.5)
+
