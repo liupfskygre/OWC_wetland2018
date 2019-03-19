@@ -58,15 +58,25 @@ TAX = tax_table(taxmat) #covert to phyoseq object, OTU table
 # August data selction
 ```{r}
 map_file <- map_file[grep("Aug-|Aug_", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
-otus <- otus[, grep("Aug-|Aug_", colnames(otus), ignore.case=TRUE, invert=FALSE)]
+otus <- otus[, grep("Aug-|Aug_|taxonomy", colnames(otus), ignore.case=TRUE, invert=FALSE)]
 ```
 
 # August-D1 selction, move to  phyloseq section after data selection
 ```{r}
 map_file_D <- map_file[grep("-D1-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
-otus_D <- otus[, grep("-D1-", colnames(otus), ignore.case=TRUE, invert=FALSE)]
+otus_D <- otus[, grep("-D1-|taxonomy", colnames(otus), ignore.case=TRUE, invert=FALSE)]
 ```
+##data for stamps
+#export metafile and otu file
+```{r}
+library(gtools)
+otus_D_ReAb=sweep(otus_D[,1:(ncol(otus_D)-1)], 2, colSums(otus_D[,1:(ncol(otus_D)-1)]), FUN="/")
+otus_D_ReAb = otus_D_ReAb [apply(otus_D_ReAb, 1, max)>=0.001,]
+otus_D_ReAb 
 
+write.table(data.frame("Sample_ID"=rownames(map_file_D),map_file_D),"map_file_Aug_D1_Cores.txt", sep="\t", row.names=FALSE, quote = FALSE)
+write.table(data.frame("OTU_ID"=rownames(otus_D_ReAb ), otus_D_ReAb ),"feature_table_Aug_D1_Cores_ge10.txt", sep="\t", row.names=FALSE, quote = FALSE)
+```
 
 # August-D2 selction, move to  phyloseq section after data selection
 ```{r}
@@ -104,7 +114,7 @@ otus_D <- otus[, grep("-D6-", colnames(otus), ignore.case=TRUE, invert=FALSE)]
 # 
 # otu
 ```{r}
-otumat<-as.matrix(otus_D)
+otumat<-as.matrix(otus_D[[,-ncol(otus_D)])
 OTU = otu_table(otumat, taxa_are_rows = TRUE)
 physeq<-phyloseq(OTU,TAX) 
 
@@ -125,5 +135,4 @@ pmds=pmds + geom_point(size=1.5)+scale_color_manual(values=pal) #
 pmds
 ```
 
-```{r}
-```
+

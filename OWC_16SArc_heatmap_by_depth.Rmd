@@ -1,0 +1,210 @@
+---
+title: "OWC_16SArc_Heatmap_by_depth"
+author: "Liupf"
+date: "3/18/2019"
+output: html_document
+---
+
+#library
+```{r}
+library(phyloseq)
+library(ggplot2)
+library(RColorBrewer)
+
+library("factoextra")
+library("FactoMineR") # PCA function
+library("gplots") #heatmap
+library("vegan") # prcomp
+library('vegetarian') # normalize.rows function
+library(dplyr)
+library(tibble)
+library(dendsort)
+```
+
+```{r}
+setwd("~/A_Wrighton_lab/Wetland_project/16SrRNA_ana_Adrienne")
+```
+
+# mapping file
+map_file_clean_Cores.txt
+# ASV file, 
+feature_table_w_tax_clean_Cores_ge10.txt
+# in bash
+sed -e '1s/\./-/g' feature_table_w_tax_clean_Cores_ge10.txt >feature_table_w_tax_clean_Cores_ge10f.txt
+
+# tax file
+filtered_ge10_trimmed_tax_tab.txt
+
+# read file
+```{r}
+map_file<-read.delim("map_file_clean_Cores.txt",header=T,row.names=1)
+otus<-read.delim("feature_table_w_tax_clean_Cores_ge10f.txt",header=T,row.names=1, check.names=FALSE) 
+taxa<-read.delim("filtered_ge10_trimmed_tax_tab.txt",header = T,row.names = 1) #tax_info, 
+```
+
+# add eco_dep column in the mapping file
+```{r}
+library(tidyr)
+map_file$ecosite1=gsub("1|2|3","",map_file$ecosite)
+map_file = unite(map_file, eco_dep, c(ecosite1, depth), remove=FALSE)
+map_file = map_file[order(map_file$eco_dep), ,drop=FALSE] #M (D1-D6), N, OW, T is the order
+```
+
+#color code setup
+```{r}
+library(RColorBrewer)
+bluepal<-brewer.pal(6,"Blues") #open water
+orangepal<-brewer.pal(6,"Oranges") # mud
+greenpal1<-brewer.pal(6,"Greens") # Typha
+greenpal2<-brewer.pal(6,"YlGn") # Nelumbo
+pal<-c(orangepal[4], orangepal[5], orangepal[6], greenpal1[2], greenpal1[3], greenpal1[4], bluepal[4], bluepal[5], bluepal[6], greenpal2[6])
+
+
+```
+
+# separate all depth, keep all ecosite and month
+# data selction, separate Archea and Bacteria
+```{r}
+#otus_Ba <- otus[grep("Bacteria", otus$taxonomy, ignore.case=TRUE, invert=FALSE), ]
+otus_Ar <- otus[grep("Archaea", otus$taxonomy, ignore.case=TRUE, invert=FALSE), ] 
+#map_file <- map_file[grep("Aug-|Aug_", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+#otus <- otus[, grep("Aug-|Aug_|taxonomy", colnames(otus), ignore.case=TRUE, invert=FALSE)]
+```
+
+# convert to relative abundance, not used
+```{r}
+library(gtools)
+#otus_Ba_ReAb=sweep(otus_Ba[,1:(ncol(otus_Ba)-1)], 2, colSums(otus_Ba[,1:(ncol(otus_Ba)-1)]), FUN="/")
+#otus_Ba_ReAb$taxonomy= otus_Ba$taxonomy
+#otus_Ar_ReAb=sweep(otus_Ar[,1:(ncol(otus_Ar)-1)], 2, colSums(otus_Ar[,1:(ncol(otus_Ar)-1)]), FUN="/")
+#otus_Ar_ReAb$taxonomy= otus_Ar$taxonomy
+#
+#feature_table_Arc_w_tax= merge(otus, Arc, by=0, all=FALSE)
+#otus_D_ReAb = otus_D_ReAb [apply(otus_D_ReAb, 1, max)>=0.001,]
+#otus_D_ReAb 
+#write.table(data.frame("Sample_ID"=rownames(map_file_D),map_file_D),"map_file_Aug_D1_Cores.txt", sep="\t", row.names=FALSE, quote = FALSE)
+#write.table(data.frame("OTU_ID"=rownames(otus_D_ReAb ), otus_D_ReAb ),"feature_table_Aug_D1_Cores_ge10.txt", sep="\t", row.names=FALSE, quote = FALSE)
+```
+# All-month-Archaea
+# D-1
+```{r}
+#map_file_D <- map_file[grep("-D1-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- otus_Ar[, grep("-D1-|taxonomy", colnames(otus_Ar), ignore.case=TRUE, invert=FALSE)]
+```
+#move to pca selection and ploting after each data prep of one depth
+
+# D-2
+```{r}
+#map_file_D <- map_file[grep("-D2-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- otus_Ar[, grep("-D2-|taxonomy", colnames(otus_Ar), ignore.case=TRUE, invert=FALSE)]
+```
+
+# D-3
+```{r}
+#map_file_D <- map_file[grep("-D3-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- otus_Ar[, grep("-D3-|taxonomy", colnames(otus_Ar), ignore.case=TRUE, invert=FALSE)]
+```
+
+
+# D-4
+```{r}
+#map_file_D <- map_file[grep("-D4-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- otus_Ar[, grep("-D4-|taxonomy", colnames(otus_Ar), ignore.case=TRUE, invert=FALSE)]
+```
+
+
+# D-5
+```{r}
+#map_file_D <- map_file[grep("-D5-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- otus_Ar[, grep("-D5-|taxonomy", colnames(otus_Ar), ignore.case=TRUE, invert=FALSE)]
+```
+
+
+# D-6
+```{r}
+#map_file_D <- map_file[grep("-D6-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- otus_Ar[, grep("-D6-|taxonomy", colnames(otus_Ar), ignore.case=TRUE, invert=FALSE)]
+```
+
+
+###the same to all depth
+#loading calculation
+```{r}
+otus_Dt <- as.data.frame (t(otus_D[,-ncol(otus_D)])) #samples as row, otu as column
+otus_Dt.na <- na.omit(otus_Dt)
+#hellinger distance
+otus_Dt.na.hellinger <- decostand(otus_Dt.na, "hellinger") # calculate hellinger distances
+otus_Dt.na.prcomp<-prcomp(otus_Dt.na.hellinger)
+aload <- abs(otus_Dt.na.prcomp$rotation)
+absloading=sweep(aload, 2, colSums(aload), "/")
+absloading = absloading [,1:2]
+
+
+#the same to all depth
+#pca selection
+#
+
+#filter top 100 for pc1
+absloading_pc1=data.frame(absloading[,1])
+absloading_pc1<- absloading_pc1 %>% rownames_to_column('OTUs') %>% top_n (100) %>% column_to_rownames('OTUs')
+#filter top 100 for pc2
+absloading_pc2=data.frame(absloading[,2])
+absloading_pc2<- absloading_pc2 %>% rownames_to_column('OTUs') %>% top_n (100) %>% column_to_rownames('OTUs')
+top_otus= unique(c(row.names(absloading_pc1),row.names(absloading_pc2)))
+
+#selected by top_otus names
+otus_Dt.na_top=subset(otus_Dt.na,select = top_otus)
+
+#relative abundance cal
+Re_abundances<-normalize.rows(otus_Dt.na_top)
+percentages<-100*Re_abundances
+rownames(percentages)<-rownames(otus_Dt.na_top)
+colnames(percentages)<-colnames(otus_Dt.na_top)
+
+
+#distance for row and col clustering
+
+drows = dist(as.matrix(decostand(percentages, "hellinger")), method = "euclidean") #decostand(OTUtable_t.na, "hellinger")
+dcols = dist(t(as.matrix(decostand(percentages, "hellinger"))), method = "euclidean") #decostand(OTUtable_t.na, "hellinger")
+
+
+#clustering
+## prepare for the cluster
+##http://slowkow.com/notes/heatmap-tutorial/
+
+#library(dendsort)
+sort_hclust <- function(...) as.hclust(dendsort(as.dendrogram(...)))
+mat_cluster_cols <- hclust(dcols)
+mat_cluster_rows <- hclust(drows)
+#plot(mat_cluster_cols, main = "", xlab = "", sub = "")
+
+
+
+#break setting
+# break 2
+quantile.range <- quantile(as.matrix(percentages), probs = seq(0, 1, 0.01))
+mat_breaks <- seq(quantile.range["5%"], quantile.range["95%"], 0.001)
+color  <- colorRampPalette(c("blue", "white","firebrick3"))(length(mat_breaks) - 1); c("royalblue4","#FFFFBF","orangered2")
+```
+
+#pheatmap plotting
+```{r}
+pheatmap(as.matrix(percentages),color = color,breaks= mat_breaks,clustering_distance_rows = drows,clustering_distance_cols=dcols,clustering_method="complete",cellwidth=3,cellheight=5,treeheight_col=0, cluster_cols= mat_cluster_cols,cluster_rows = mat_cluster_rows,show_colnames=FALSE,fontsize=6) # better # hhBC, hclust, hellinger,Bray, complete
+#filename="Utah_Arc_OTU_top25_hhBC_reorder.pdf"
+```
+
+
+#retrieve the ordre of OTUs
+```{r}
+Ad=as.dendrogram(mat_cluster_cols )
+order.dendrogram(Ad)
+order=data.frame(row.names = colnames(percentages),order.dendrogram(Ad))
+order=merge(otus_D,order,by=0)
+order_tax=order[ ,c(1,(ncol(order)-1):ncol(order))]
+```
+
+#export order data
+```{r}
+write.table(order_tax, sep="\t",file="ArcDep6_otus_hcluster_order_tax.txt",row.names = FALSE) #change the depth1, 2, 3, 4, 5, 6
+
+```
