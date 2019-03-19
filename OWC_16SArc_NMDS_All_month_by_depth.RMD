@@ -87,8 +87,8 @@ otus_D <- otus_Ar[, grep("-D5-|taxonomy", colnames(otus_Ar), ignore.case=TRUE, i
 ```
 #D-6
 ```{r}
-map_file_D <- map_file[grep("-D5-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
-otus_D <- otus_Ar[, grep("-D5-|taxonomy", colnames(otus_Ar), ignore.case=TRUE, invert=FALSE)]
+map_file_D <- map_file[grep("-D6-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- otus_Ar[, grep("-D6-|taxonomy", colnames(otus_Ar), ignore.case=TRUE, invert=FALSE)]
 ```
 # move to  phyloseq section after data selection
 
