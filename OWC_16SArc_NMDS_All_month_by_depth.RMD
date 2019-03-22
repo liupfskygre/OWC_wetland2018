@@ -124,5 +124,5 @@ pmds
 
 #save plot
 ```{r}
-ggsave(pmds, filename = "16SArc_NMDS_allMonth_by_D1.pdf", width = 8, height = 8, units = "in") #change the depth #1
+ggsave(pmds, filename = "16SArc_NMDS_allMonth_by_D6.pdf", width = 8, height = 8, units = "in") #change the depth #1, 2, 3, 4, 5, 6
 ```

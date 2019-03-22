@@ -9,6 +9,8 @@ library(RColorBrewer)
 setwd("~/A_Wrighton_lab/Wetland_project/16SrRNA_ana_Adrienne")
 ```
 
+#data
+```
 # mapping file
 map_file_clean_Cores.txt
 # ASV file, 
@@ -19,14 +21,13 @@ sed -e '1s/\./-/g' feature_table_w_tax_clean_Cores_ge10.txt >feature_table_w_tax
 # tax file
 filtered_ge10_trimmed_tax_tab.txt
 
+```
 # read file
 ```{r}
 map_file<-read.delim("map_file_clean_Cores.txt",header=T,row.names=1)
-
 otus<-read.delim("feature_table_w_tax_clean_Cores_ge10f.txt",header=T,row.names=1, check.names=FALSE) 
-
 taxa<-read.delim("filtered_ge10_trimmed_tax_tab.txt",header = T,row.names = 1) #tax_info, 
-
+taxa$Family <- sub("^$", "Unclassified", taxa$Family)
 ```
 
 # add eco_dep column in the mapping file
@@ -44,54 +45,63 @@ bluepal<-brewer.pal(6,"Blues") #open water
 orangepal<-brewer.pal(6,"Oranges") # mud
 greenpal1<-brewer.pal(6,"Greens") # Typha
 greenpal2<-brewer.pal(6,"YlGn") # Nelumbo
-pal<-c(orangepal[4], orangepal[5], orangepal[6], greenpal1[2], greenpal1[3], greenpal1[4], bluepal[4], bluepal[5], bluepal[6], greenpal2[6])
-
-
+#pal<-c(orangepal[4], orangepal[5], orangepal[6], greenpal1[2], greenpal1[3], greenpal1[4], bluepal[4], bluepal[5], bluepal[6], greenpal2[6])
 ```
 
 # separate all depth, keep all ecosite and month
 # data selction, separate Archea and Bacteria
 ```{r}
-otus_Ba <- otus[grep("Bacteria", otus$taxonomy, ignore.case=TRUE, invert=FALSE), ]
-#otus_Ar <- otus[grep("Archaea", otus$taxonomy, ignore.case=TRUE, invert=FALSE), ] 
-
+#
 #map_file <- map_file[grep("Aug-|Aug_", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
 #otus <- otus[, grep("Aug-|Aug_|taxonomy", colnames(otus), ignore.case=TRUE, invert=FALSE)]
 ```
 
-# All-month-Bacterial
+#aggregate to Family level
+```{r}
+otus_Ar <- otus[grep("Archaea", otus$taxonomy, ignore.case=TRUE, invert=FALSE), ] 
+require(gtools) 
+name=c(colnames(otus_Ar[,-ncol(otus_Ar)]))
+otus_Ar=transform(merge(otus_Ar,taxa, by='row.names',sort=F, all.x=TRUE),row.names=Row.names, Row.names=NULL)
+#OTU_Tax16SREab=merge(OTU_16SREab,Taxo16S,by='row.names',sort=F)
+#OTU_16SREab=sweep(OTU_16S[,1:54], 2, colSums(OTU_16S[,1:54]), FUN="/")
+otus_Ar=na.omit(otus_Ar)
+#otus_Ba$Family <- sub("^$", "Unclassified", otus_Ba$Family)
+otus_Ar=transform(aggregate(x=otus_Ar[,1:(ncol(otus_Ar)-8)],by=list(otus_Ar$Family),FUN='sum'), row.names=Group.1,Group.1=NULL)
+colnames(otus_Ar)<-name
+```
+
+# All-month-Archaea
 # D-1
 ```{r}
 map_file_D <- map_file[grep("-D1-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
-otus_D <- otus_Ba[, grep("-D1-|taxonomy", colnames(otus_Ba), ignore.case=TRUE, invert=FALSE)]
+otus_D <- otus_Ar[, grep("-D1-|taxonomy", colnames(otus_Ar), ignore.case=TRUE, invert=FALSE)]
 ```
 
 #D-2
 ```{r}
 map_file_D <- map_file[grep("-D2-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
-otus_D <- otus_Ba[, grep("-D2-|taxonomy", colnames(otus_Ba), ignore.case=TRUE, invert=FALSE)]
+otus_D <- otus_Ar[, grep("-D2-|taxonomy", colnames(otus_Ar), ignore.case=TRUE, invert=FALSE)]
 ```
 #D-3
 ```{r}
 map_file_D <- map_file[grep("-D3-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
-otus_D <- otus_Ba[, grep("-D3-|taxonomy", colnames(otus_Ba), ignore.case=TRUE, invert=FALSE)]
+otus_D <- otus_Ar[, grep("-D3-|taxonomy", colnames(otus_Ar), ignore.case=TRUE, invert=FALSE)]
 ```
 #D-4
 ```{r}
 map_file_D <- map_file[grep("-D4-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
-otus_D <- otus_Ba[, grep("-D4-|taxonomy", colnames(otus_Ba), ignore.case=TRUE, invert=FALSE)]
+otus_D <- otus_Ar[, grep("-D4-|taxonomy", colnames(otus_Ar), ignore.case=TRUE, invert=FALSE)]
 ```
 #D-5
 ```{r}
 map_file_D <- map_file[grep("-D5-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
-otus_D <- otus_Ba[, grep("-D5-|taxonomy", colnames(otus_Ba), ignore.case=TRUE, invert=FALSE)]
+otus_D <- otus_Ar[, grep("-D5-|taxonomy", colnames(otus_Ar), ignore.case=TRUE, invert=FALSE)]
 ```
 #D-6
 ```{r}
 map_file_D <- map_file[grep("-D6-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
-otus_D <- otus_Ba[, grep("-D6-|taxonomy", colnames(otus_Ba), ignore.case=TRUE, invert=FALSE)]
+otus_D <- otus_Ar[, grep("-D6-|taxonomy", colnames(otus_Ar), ignore.case=TRUE, invert=FALSE)]
 ```
-
 # move to  phyloseq section after data selection
 
 # phyloseq section and plot
@@ -106,7 +116,7 @@ TAX = tax_table(taxmat) #covert to phyoseq object, OTU table
 # otu
 otumat<-as.matrix(otus_D[,-ncol(otus_D)])
 OTU = otu_table(otumat, taxa_are_rows = TRUE)
-physeq<-phyloseq(OTU,TAX) 
+physeq<-phyloseq(OTU) #TAX removed
 
 sampledata<-sample_data(map_file_D)
 mgd<-merge_phyloseq(physeq,sampledata)
@@ -123,5 +133,28 @@ pmds
 
 #save plot
 ```{r}
-ggsave(pmds, filename = "16SBac_NMDS_allMonth_by_D1.pdf", width = 8, height = 8, units = "in") #change the depth #1
+ggsave(pmds, filename = "16SBacFamily_NMDS_allMonth_by_D1.pdf", width = 8, height = 8, units = "in") #change the depth #1
 ```
+
+#plot_all samples, with D1-D6
+#otus_Ba
+```{r}
+pal<-c(orangepal[1], orangepal[2], orangepal[3], orangepal[4], orangepal[5], orangepal[6], greenpal1[1], greenpal1[2], greenpal1[3], greenpal1[4], greenpal1[5], greenpal1[6], bluepal[1], bluepal[2], bluepal[3], bluepal[4], bluepal[5], bluepal[6], greenpal2[1], greenpal2[2], greenpal2[3], greenpal2[4], greenpal2[5], greenpal2[6])
+# otu
+otumat<-as.matrix(otus_Ar[,-ncol(otus_Ar)])
+OTU = otu_table(otumat, taxa_are_rows = TRUE)
+physeq<-phyloseq(OTU) #TAX removed
+
+sampledata<-sample_data(map_file)
+mgd<-merge_phyloseq(physeq,sampledata)
+
+mgd.ord <- ordinate(mgd, "NMDS", "bray")
+#plot
+theme_set(theme_bw())
+pmds=plot_ordination(mgd, mgd.ord, color="eco_dep", shape="depth") #
+pmds=pmds + geom_point(size=1.5)+scale_color_manual(values=pal)#
+pmds
+pmds=pmds +facet_wrap(~ecosite, 5)#
+pmds
+```
+

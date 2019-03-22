@@ -1,0 +1,377 @@
+---
+title: "OWC_Archaea_OTUs_relative abundance plot"
+author: "Liupf"
+date: "3/19/2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+#Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+#purpose
+#Methanogen (row) by OTU across samples (columns)- sum the total and sort, so we can see most abundant bugs, fine do archaea. Can organize by months if too big to show
+
+```{r}
+
+```
+```{r}
+setwd("~/A_Wrighton_lab/Wetland_project/16SrRNA_ana_Adrienne")
+```
+#library
+```{r}
+library(phyloseq)
+library(ggplot2)
+library(RColorBrewer)
+library("factoextra")
+library("FactoMineR") # PCA function
+library("gplots") #heatmap
+library("vegan") # prcomp
+library('vegetarian') # normalize.rows function
+library(dplyr)
+library(tidyr)
+library(tibble)
+library(dendsort) #library(dendsort)
+library(pheatmap)
+```
+
+#color code setup
+```{r}
+library(RColorBrewer)
+bluepal<-brewer.pal(6,"Blues") #open water
+orangepal<-brewer.pal(6,"Oranges") # mud
+greenpal1<-brewer.pal(6,"Greens") # Typha
+greenpal2<-brewer.pal(6,"YlGn") # Nelumbo
+pal<-c(orangepal[4], orangepal[5], orangepal[6], greenpal1[2], greenpal1[3], greenpal1[4], bluepal[4], bluepal[5], bluepal[6], greenpal2[6])
+
+
+```
+
+```
+# mapping file
+map_file_clean_Cores.txt
+# ASV file, 
+feature_table_w_tax_clean_Cores_ge10.txt
+# in bash
+sed -e '1s/\./-/g' feature_table_w_tax_clean_Cores_ge10.txt >feature_table_w_tax_clean_Cores_ge10f.txt
+
+# tax file
+filtered_ge10_trimmed_tax_tab.txt
+```
+# read file
+```{r}
+map_file<-read.delim("map_file_clean_Cores.txt",header=T,row.names=1)
+otus<-read.delim("feature_table_w_tax_clean_Cores_ge10f.txt",header=T,row.names=1, check.names=FALSE) 
+taxa<-read.delim("filtered_ge10_trimmed_tax_tab.txt",header = T,row.names = 1) #tax_info, 
+```
+
+# add eco_dep column in the mapping file
+```{r}
+library(tidyr)
+map_file$ecosite1=gsub("1|2|3","",map_file$ecosite)
+map_file = unite(map_file, eco_dep, c(ecosite1, depth), remove=FALSE)
+map_file = map_file[order(map_file$eco_dep), ,drop=FALSE] #M (D1-D6), N, OW, T is the order
+```
+
+#separate Bacteria and archaea
+# data selction, separate Archea and Bacteria
+```{r}
+otus_Ba <- otus[grep("Bacteria", otus$taxonomy, ignore.case=TRUE, invert=FALSE), ]
+otus_Ar <- otus[grep("Archaea", otus$taxonomy, ignore.case=TRUE, invert=FALSE), ] 
+#map_file <- map_file[grep("Aug-|Aug_", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+#otus <- otus[, grep("Aug-|Aug_|taxonomy", colnames(otus), ignore.case=TRUE, invert=FALSE)]
+```
+
+
+#claculate relative abundances
+```{r}
+library(gtools)
+#bacteria
+otus_Ba_ReAb=sweep(otus_Ba[,1:(ncol(otus_Ba)-1)], 2, colSums(otus_Ba[,1:(ncol(otus_Ba)-1)]), FUN="/")
+otus_Ba_ReAb = otus_Ba_ReAb*100
+otus_Ba_ReAb$taxonomy= otus_Ba$taxonomy
+otus_Ba_ReAb=transform(merge(otus_Ba_ReAb,taxa, by='row.names',sort=F, all.x=TRUE),row.names=Row.names, Row.names=NULL)
+name=c(colnames(otus_Ar), colnames(taxa))
+
+otus_Ba_ReAb=na.omit(otus_Ba_ReAb)
+otus_Ba_ReAb$Genus <- sub("^$", "g_", otus_Ba_ReAb$Genus)
+otus_Ba_ReAb$Family <- sub("^$", "f_", otus_Ba_ReAb$Family)
+otus_Ba_ReAb$Order <- sub("^$", "o_", otus_Ba_ReAb$Order)
+otus_Ba_ReAb$Class <- sub("^$", "c_", otus_Ba_ReAb$Class)
+colnames(otus_Ba_ReAb)<-name
+```
+
+#archaea
+```{r}
+otus_Ar_ReAb=sweep(otus_Ar[,1:(ncol(otus_Ar)-1)], 2, colSums(otus_Ar[,1:(ncol(otus_Ar)-1)]), FUN="/")
+otus_Ar_ReAb = otus_Ar_ReAb*100
+otus_Ar_ReAb$taxonomy= otus_Ar$taxonomy
+otus_Ar_ReAb=transform(merge(otus_Ar_ReAb,taxa, by='row.names',sort=F, all.x=TRUE),row.names=Row.names, Row.names=NULL)
+name=c(colnames(otus_Ar), colnames(taxa))
+
+otus_Ar_ReAb=na.omit(otus_Ar_ReAb)
+otus_Ar_ReAb$Genus <- sub("^$", "g_", otus_Ar_ReAb$Genus)
+otus_Ar_ReAb$Family <- sub("^$", "f_", otus_Ar_ReAb$Family)
+otus_Ar_ReAb$Order <- sub("^$", "o_", otus_Ar_ReAb$Order)
+otus_Ar_ReAb$Class <- sub("^$", "c_", otus_Ar_ReAb$Class)
+colnames(otus_Ar_ReAb)<-name
+
+#tax_tem_ar=otus_Ar_ReAb[,631:638]
+#otus_Ar=transform(aggregate(x=otus_Ar[,1:(ncol(otus_Ar)-8)],by=list(otus_Ar$Family),FUN='sum'), row.names=Group.1,Group.1=NULL)
+#colnames(otus_Ar)<-name
+
+#
+#feature_table_Arc_w_tax= merge(otus, Arc, by=0, all=FALSE)
+#otus_D_ReAb = otus_D_ReAb [apply(otus_D_ReAb, 1, max)>=0.001,]
+#otus_D_ReAb 
+#write.table(data.frame("Sample_ID"=rownames(map_file_D),map_file_D),"map_file_Aug_D1_Cores.txt", sep="\t", row.names=FALSE, quote = FALSE)
+```
+
+```{r}
+#done
+#write.table(data.frame("OTU_ID"=rownames(otus_Ar_ReAb ), otus_Ar_ReAb ),"ASV_Cores_ge10_Archaea_Reab.txt", sep="\t", row.names=FALSE, quote = FALSE)
+#write.table(data.frame("OTU_ID"=rownames(otus_Ba_ReAb ), otus_Ba_ReAb ),"ASV_Cores_ge10_Bacteria_Reab.txt", sep="\t", row.names=FALSE, quote = FALSE)
+```
+
+
+#methanogens selection
+#go to silva to check we use the same "name" for searching
+https://www.arb-silva.de/search/
+
+```{r}
+#methanogens=c("Methanomicrobia","Methanobacteria","Methanococci","Methanopyri","Methanomassiliicoccales","Methanofastidiosales","WSA2","Methanofastidiosa","Verstraetearchaeia","Verstraetearchaeota","Methanomethyliales","Methanohydrogenales","Bathyarchaeia","Bathyarchaeota","Methanonatronarchaeia","Methanoflorentaceae","Methanoflorens","Syntrophoarchaeum","Rice Cluster II")
+
+#canonical methanogens
+#Cmethanogens=c("Methanomicrobia","Methanobacteria","Methanococci","Methanopyri","Methanomassiliicoccales","Methanofastidiosales","Methanofastidiosa","Verstraetearchaeia","Verstraetearchaeota","Methanomethyliales","Methanohydrogenales","Methanonatronarchaeia")
+
+otus_methanogens = otus_Ar_ReAb[grep("Methanomicrobia|Methanobacteria|Methanococci|Methanopyri|Methanomassiliicoccales|Methanofastidiosales|WSA2|Methanonatronarchaeia|Methanoflorentaceae|Methanoflorens|Methanofastidiosa|Verstraetearchaeia|Verstraetearchaeota|Methanomethyliales|Methanohydrogenales|Bathyarchaeia|Bathyarchaeota|Syntrophoarchaeum|Rice Cluster II", otus_Ar_ReAb$taxonomy, ignore.case=TRUE, invert=FALSE), ] 
+#Methanoflorens, Rice Cluster II
+
+Cotus_methanogens = otus_Ar_ReAb[grep("Methanomicrobia|Methanobacteria|Methanococci|Methanopyri|Methanomassiliicoccales|Methanofastidiosales|Methanonatronarchaeia|Methanoflorentaceae|Methanoflorens|Methanofastidiosa|Verstraetearchaeia|Verstraetearchaeota|Methanomethyliales|Methanohydrogenales|Rice Cluster II", otus_Ar_ReAb$taxonomy, ignore.case=TRUE, invert=FALSE), ] 
+
+```
+
+#sort row order
+```{r}
+#feature_table_Arc_w_tax= merge(otus, Arc, by=0, all=FALSE)
+#get the sum of each ASV across ALL sample
+Cotus_methanogens= Cotus_methanogens [apply(Cotus_methanogens[,1:630], 1, max)>=1,] #0.1% is mess
+Cotus_methanogens$sum=apply(Cotus_methanogens[,1:630], 1, sum)
+Cotus_methanogens$max=apply(Cotus_methanogens[,1:630], 1, max)
+#order by sum
+#Cotus_methanogens=Cotus_methanogens[order(Cotus_methanogens$sum, decreasing = TRUE),]
+#sort by max
+#Cotus_methanogens=Cotus_methanogens[order(Cotus_methanogens$max, decreasing = TRUE),]
+#Cotus_methanogens_tem=Cotus_methanogens[,631:640]
+Cotus_methanogens = unite(Cotus_methanogens, Ord_Fam, c(Order, Family), remove=FALSE)
+
+```
+# All-Archaea-by month
+#May
+```{r}
+map_file_D <- map_file[grep("May", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+
+otus_D <- Cotus_methanogens[, grep("May|taxonomy|Ord_Fam|Order|Family", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE)]
+otus_D= otus_D[apply(otus_D[ ,1:(ncol(otus_D)-4)], 1, max)>=1,] #0.1% is mess
+otus_D$sum=apply(otus_D[,1:(ncol(otus_D)-4)], 1, sum)
+otus_D$max=apply(otus_D[,1:(ncol(otus_D)-5)], 1, max)
+
+#order by sum, sort by sum is used since it is more clear
+otus_D=otus_D[order(otus_D$Ord_Fam, otus_D$sum, decreasing = TRUE),]
+
+#sort by max
+#otus_D=otus_D[order(otus_D$Ord_Fam, otus_D$max, decreasing = TRUE),]
+```
+#move to pheatmap ploting after each data prep of month
+
+# June
+```{r}
+map_file_D <- map_file[grep("June", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+
+otus_D <- Cotus_methanogens[, grep("June|taxonomy|Ord_Fam|Order|Family", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE)]
+otus_D= otus_D[apply(otus_D[ ,1:(ncol(otus_D)-4)], 1, max)>=1,] #0.1% is mess
+otus_D$sum=apply(otus_D[,1:(ncol(otus_D)-4)], 1, sum)
+otus_D$max=apply(otus_D[,1:(ncol(otus_D)-5)], 1, max)
+
+#order by sum, sort by sum is used since it is more clear
+otus_D=otus_D[order(otus_D$Ord_Fam, otus_D$sum, decreasing = TRUE),]
+
+#sort by max
+#otus_D=otus_D[order(otus_D$Ord_Fam, otus_D$max, decreasing = TRUE),]
+```
+
+# July
+```{r}
+map_file_D <- map_file[grep("July", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- Cotus_methanogens[, grep("July|taxonomy|Ord_Fam|Order|Family", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE)]
+otus_D= otus_D[apply(otus_D[ ,1:(ncol(otus_D)-4)], 1, max)>=1,] #0.1% is mess
+otus_D$sum=apply(otus_D[,1:(ncol(otus_D)-4)], 1, sum)
+otus_D$max=apply(otus_D[,1:(ncol(otus_D)-5)], 1, max)
+
+#order by sum, sort by sum is used since it is more clear
+otus_D=otus_D[order(otus_D$Ord_Fam, otus_D$sum, decreasing = TRUE),]
+
+#sort by max
+#otus_D=otus_D[order(otus_D$Ord_Fam, otus_D$max, decreasing = TRUE),]
+```
+
+
+# Aug
+```{r}
+map_file_D <- map_file[grep("Aug", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- Cotus_methanogens[, grep("Aug|taxonomy|Ord_Fam|Order|Family", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE)]
+otus_D= otus_D[apply(otus_D[ ,1:(ncol(otus_D)-4)], 1, max)>=1,] #0.1% is mess
+otus_D$sum=apply(otus_D[,1:(ncol(otus_D)-4)], 1, sum)
+otus_D$max=apply(otus_D[,1:(ncol(otus_D)-5)], 1, max)
+
+#order by sum, sort by sum is used since it is more clear
+otus_D=otus_D[order(otus_D$Ord_Fam, otus_D$sum, decreasing = TRUE),]
+
+#sort by max
+#otus_D=otus_D[order(otus_D$Ord_Fam, otus_D$max, decreasing = TRUE),]
+```
+
+
+# D-5
+```{r}
+map_file_D <- map_file[grep("Sept", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- Cotus_methanogens[, grep("Sept|taxonomy|Ord_Fam|Order|Family", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE)]
+otus_D= otus_D[apply(otus_D[ ,1:(ncol(otus_D)-4)], 1, max)>=1,] #0.1% is mess
+otus_D$sum=apply(otus_D[,1:(ncol(otus_D)-4)], 1, sum)
+otus_D$max=apply(otus_D[,1:(ncol(otus_D)-5)], 1, max)
+
+#order by sum, sort by sum is used since it is more clear
+otus_D=otus_D[order(otus_D$Ord_Fam, otus_D$sum, decreasing = TRUE),]
+
+#sort by max
+#otus_D=otus_D[order(otus_D$Ord_Fam, otus_D$max, decreasing = TRUE),]
+```
+
+
+# D-6
+```{r}
+#map_file_D <- map_file[grep("-D6-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- Cotus_methanogens[, grep("-D6-|taxonomy|Ord_Fam|Order|Family", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE)]
+```
+
+
+#pheatmap plotting
+
+#break setting
+# break 2
+```{r}
+df = as.matrix(otus_D[,1:(ncol(otus_D)-6)])
+#quantile.range <- quantile(as.matrix(df), probs = seq(0, 1, 0.01))
+#mat_breaks <- seq(quantile.range["5%"], quantile.range["95%"], 0.001)
+#color  <- colorRampPalette(c("blue", "white","firebrick3"))(length(mat_breaks) - 1) #c("royalblue4","#FFFFBF","orangered2"))
+
+#color = colorRampPalette(c("white","darkred"))(400) #,"gray", firebrick3
+color = colorRampPalette(c("white","red"))(400) #,"gray", firebrick3
+
+#no cluster for col, and row
+#drows = dist(as.matrix(decostand(df, "hellinger")), method = "euclidean") #decostand(OTUtable_t.na, "hellinger")
+#dcols = dist(t(as.matrix(decostand(df, "hellinger"))), method = "euclidean") #decostand(OTUtable_t.na, "hellinger")
+#sort_hclust <- function(...) as.hclust(dendsort(as.dendrogram(...)))
+#mat_cluster_cols <- hclust(dcols)
+#mat_cluster_rows <- hclust(drows)
+
+#get row annotation
+my_otus_row=subset(otus_D, select=Order) 
+ 
+#get column annotation---->sample sites
+#use match to reorder df1, DF1[match(rownames(DF2), rownames(DF1)), ]
+map_file_D=map_file_D[match(colnames(otus_D[,1:(ncol(otus_D)-6)]),rownames(map_file_D)), ] 
+my_sample_col= subset(map_file_D, select=ecosite)
+
+#get column annotation---->Depth
+#use match to reorder df1, DF1[match(rownames(DF2), rownames(DF1)), ]
+my_sample_col2= subset(map_file_D, select=depth)
+
+#merge annotation_col
+annotation_col =data.frame(depth=my_sample_col2,ecosite=my_sample_col, row.names = rownames(map_file_D))
+
+#pal
+#brewer.pal(n = 6, name = "Dark2") for the taxon
+#brewer.pal(n = 9, name = "Greys") for depth
+#barplot(c(1:9),cool=brewer.pal(n = 9, name = "Greys"))
+
+#annotation colors
+anno_colors= list(ecosite = c(M1=orangepal[4], M2=orangepal[5], M3=orangepal[6], N1=greenpal1[4], N2=greenpal1[5], N3=greenpal1[6], OW1=bluepal[4], OW2=bluepal[5], OW3=bluepal[6], T1=greenpal2[2]), Order=c(Methanosarcinales="#1B9E77", Methanomicrobiales="#D95F02", Methanomassiliicoccales= "#7570B3", Methanofastidiosales="#E7298A", Methanocellales="#66A61E", Methanobacteriales="#E6AB02"), depth=c(D1="#D9D9D9", D2="#BDBDBD" , D3="#969696", D4="#737373", D5="#525252", D6="#252525")) #list specify the annotation names
+```
+
+
+#pheatmap plot
+```{r, echo = FALSE}
+pheatmap(df,cluster_rows=FALSE,cluster_cols=FALSE,labels_row=otus_D$Family, cellwidth=8,cellheight=8,fontsize = 6, color = color, annotation_row =my_otus_row,annotation_col = annotation_col,annotation_colors = anno_colors)
+```
+
+#pheatmap tricks
+```{r}
+#df = as.matrix(otus_D[,1:(ncol(otus_D)-6)])
+#pheatmap(df,cluster_rows=FALSE,cluster_cols=FALSE,labels_row=otus_D$Ord_Fam, cellwidth=8,cellheight=8,fontsize = 6)
+#pheatmap(df,color = color,breaks= mat_breaks,cellwidth=8,cellheight=5, show_colnames=TRUE, fontsize=6)
+#https://davetang.org/muse/2018/05/15/making-a-heatmap-in-r-with-the-pheatmap-package/
+#pheatmap(df,cluster_rows=FALSE,labels_row=otus_D$Ord_Fam, cellwidth=8,cellheight=8,fontsize = 6, clustering_distance_cols=dcols, clustering_method="complete", cluster_cols= mat_cluster_cols)
+#pheatmap(df,color = color,breaks= mat_breaks,cellwidth=8,cellheight=5, show_colnames=TRUE, fontsize=6)
+#https://davetang.org/muse/2018/05/15/making-a-heatmap-in-r-with-the-pheatmap-package/
+#https://stackoverflow.com/questions/41628450/r-pheatmap-change-annotation-colors-and-prevent-graphics-window-from-popping-up
+```
+
+#pheatmap(as.matrix(percentages),color = color,breaks= mat_breaks,clustering_distance_rows = drows, clustering_distance_cols=dcols, clustering_method="complete",cellwidth=8,cellheight=5, cluster_cols= mat_cluster_cols,cluster_rows = mat_cluster_rows, show_colnames=TRUE, fontsize=6)
+
+
+#transform, make OTUs as the cloumn and samples as rows,
+```{r}
+
+
+```
+
+#family level alluvial plot, top three methanogenes family
+```{r}
+
+
+```
+
+# All-by_Depth-Archaea
+#D1
+```{r}
+#map_file_D <- map_file[grep("-D1-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- Cotus_methanogens[, grep("-D1-|taxonomy|Ord_Fam|Order|Family", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE)]
+
+```
+#move to pca selection and ploting after each data prep of one depth
+
+# D-2
+```{r}
+#map_file_D <- map_file[grep("-D2-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- Cotus_methanogens[, grep("-D2-|taxonomy|Ord_Fam|Order|Family", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE)]
+```
+
+# D-3
+```{r}
+#map_file_D <- map_file[grep("-D3-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- Cotus_methanogens[, grep("-D3-|taxonomy|Ord_Fam|Order|Family", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE)]
+```
+
+
+# D-4
+```{r}
+#map_file_D <- map_file[grep("-D4-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- Cotus_methanogens[, grep("-D4-|taxonomy|Ord_Fam|Order|Family", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE)]
+```
+
+
+# D-5
+```{r}
+#map_file_D <- map_file[grep("-D5-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- Cotus_methanogens[, grep("-D5-|taxonomy|Ord_Fam|Order|Family", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE)]
+```
+
+
+# D-6
+```{r}
+#map_file_D <- map_file[grep("-D6-", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+otus_D <- Cotus_methanogens[, grep("-D6-|taxonomy|Ord_Fam|Order|Family", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE)]
+```
+
+

@@ -1,0 +1,340 @@
+---
+title: "Alluvial_plot_wetland_methanogens"
+author: "Liupf"
+date: "3/19/2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+#Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+#Methanogen by top three familes across all sites with month (alluvial plot)
+
+
+```{r}
+setwd("~/A_Wrighton_lab/Wetland_project/16SrRNA_ana_Adrienne")
+```
+#library
+```{r}
+library(phyloseq)
+library(ggplot2)
+library(RColorBrewer)
+library("factoextra")
+library("FactoMineR") # PCA function
+library("gplots") #heatmap
+library("vegan") # prcomp
+library('vegetarian') # normalize.rows function
+library(dplyr)
+library(tibble)
+library(dendsort) #library(dendsort)
+library(pheatmap)
+```
+#family level alluvial plot, top three methanogenes family
+
+```{r}
+library(ggalluvial)
+library(reshape2)
+library(dplyr)
+library(alluvial)
+```
+
+```
+# mapping file
+map_file_clean_Cores.txt
+# ASV file, 
+feature_table_w_tax_clean_Cores_ge10.txt
+# in bash
+sed -e '1s/\./-/g' feature_table_w_tax_clean_Cores_ge10.txt >feature_table_w_tax_clean_Cores_ge10f.txt
+
+# tax file
+filtered_ge10_trimmed_tax_tab.txt
+```
+# read file
+```{r}
+map_file<-read.delim("map_file_clean_Cores.txt",header=T,row.names=1)
+otus<-read.delim("feature_table_w_tax_clean_Cores_ge10f.txt",header=T,row.names=1, check.names=FALSE) 
+taxa<-read.delim("filtered_ge10_trimmed_tax_tab.txt",header = T,row.names = 1) #tax_info, 
+```
+
+# add eco_dep column in the mapping file
+```{r}
+library(tidyr)
+map_file$ecosite1=gsub("1|2|3","",map_file$ecosite)
+map_file = unite(map_file, eco_dep, c(ecosite1, depth), remove=FALSE)
+map_file = map_file[order(map_file$eco_dep), ,drop=FALSE] #M (D1-D6), N, OW, T is the order
+```
+
+#separate Bacteria and archaea
+# data selction, separate Archea and Bacteria
+```{r}
+otus_Ba <- otus[grep("Bacteria", otus$taxonomy, ignore.case=TRUE, invert=FALSE), ]
+otus_Ar <- otus[grep("Archaea", otus$taxonomy, ignore.case=TRUE, invert=FALSE), ] 
+#map_file <- map_file[grep("Aug-|Aug_", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+#otus <- otus[, grep("Aug-|Aug_|taxonomy", colnames(otus), ignore.case=TRUE, invert=FALSE)]
+```
+
+
+#claculate relative abundances
+```{r}
+library(gtools)
+#bacteria
+otus_Ba_ReAb=sweep(otus_Ba[,1:(ncol(otus_Ba)-1)], 2, colSums(otus_Ba[,1:(ncol(otus_Ba)-1)]), FUN="/")
+otus_Ba_ReAb = otus_Ba_ReAb*100
+otus_Ba_ReAb$taxonomy= otus_Ba$taxonomy
+otus_Ba_ReAb=transform(merge(otus_Ba_ReAb,taxa, by='row.names',sort=F, all.x=TRUE),row.names=Row.names, Row.names=NULL)
+name=c(colnames(otus_Ar), colnames(taxa))
+
+otus_Ba_ReAb=na.omit(otus_Ba_ReAb)
+otus_Ba_ReAb$Genus <- sub("^$", "g_", otus_Ba_ReAb$Genus)
+otus_Ba_ReAb$Family <- sub("^$", "f_", otus_Ba_ReAb$Family)
+otus_Ba_ReAb$Order <- sub("^$", "o_", otus_Ba_ReAb$Order)
+otus_Ba_ReAb$Class <- sub("^$", "c_", otus_Ba_ReAb$Class)
+colnames(otus_Ba_ReAb)<-name
+```
+
+#archaea
+```{r}
+otus_Ar_ReAb=sweep(otus_Ar[,1:(ncol(otus_Ar)-1)], 2, colSums(otus_Ar[,1:(ncol(otus_Ar)-1)]), FUN="/")
+otus_Ar_ReAb = otus_Ar_ReAb*100
+otus_Ar_ReAb$taxonomy= otus_Ar$taxonomy
+otus_Ar_ReAb=transform(merge(otus_Ar_ReAb,taxa, by='row.names',sort=F, all.x=TRUE),row.names=Row.names, Row.names=NULL)
+name=c(colnames(otus_Ar), colnames(taxa))
+
+otus_Ar_ReAb=na.omit(otus_Ar_ReAb)
+otus_Ar_ReAb$Genus <- sub("^$", "g_", otus_Ar_ReAb$Genus)
+otus_Ar_ReAb$Family <- sub("^$", "f_", otus_Ar_ReAb$Family)
+otus_Ar_ReAb$Order <- sub("^$", "o_", otus_Ar_ReAb$Order)
+otus_Ar_ReAb$Class <- sub("^$", "c_", otus_Ar_ReAb$Class)
+colnames(otus_Ar_ReAb)<-name
+
+
+
+#
+#feature_table_Arc_w_tax= merge(otus, Arc, by=0, all=FALSE)
+#otus_D_ReAb = otus_D_ReAb [apply(otus_D_ReAb, 1, max)>=0.001,]
+#otus_D_ReAb 
+#write.table(data.frame("Sample_ID"=rownames(map_file_D),map_file_D),"map_file_Aug_D1_Cores.txt", sep="\t", row.names=FALSE, quote = FALSE)
+```
+
+#methanogens selection
+#go to silva to check we use the same "name" for searching
+https://www.arb-silva.de/search/
+
+```{r}
+#methanogens=c("Methanomicrobia","Methanobacteria","Methanococci","Methanopyri","Methanomassiliicoccales","Methanofastidiosales","WSA2","Methanofastidiosa","Verstraetearchaeia","Verstraetearchaeota","Methanomethyliales","Methanohydrogenales","Bathyarchaeia","Bathyarchaeota","Methanonatronarchaeia","Methanoflorentaceae","Methanoflorens","Syntrophoarchaeum","Rice Cluster II")
+
+#canonical methanogens
+#Cmethanogens=c("Methanomicrobia","Methanobacteria","Methanococci","Methanopyri","Methanomassiliicoccales","Methanofastidiosales","Methanofastidiosa","Verstraetearchaeia","Verstraetearchaeota","Methanomethyliales","Methanohydrogenales","Methanonatronarchaeia")
+
+otus_methanogens = otus_Ar_ReAb[grep("Methanomicrobia|Methanobacteria|Methanococci|Methanopyri|Methanomassiliicoccales|Methanofastidiosales|WSA2|Methanonatronarchaeia|Methanoflorentaceae|Methanoflorens|Methanofastidiosa|Verstraetearchaeia|Verstraetearchaeota|Methanomethyliales|Methanohydrogenales|Bathyarchaeia|Bathyarchaeota|Syntrophoarchaeum|Rice Cluster II", otus_Ar_ReAb$taxonomy, ignore.case=TRUE, invert=FALSE), ] 
+#Methanoflorens, Rice Cluster II
+
+Cotus_methanogens = otus_Ar_ReAb[grep("Methanomicrobia|Methanobacteria|Methanococci|Methanopyri|Methanomassiliicoccales|Methanofastidiosales|Methanonatronarchaeia|Methanoflorentaceae|Methanoflorens|Methanofastidiosa|Verstraetearchaeia|Verstraetearchaeota|Methanomethyliales|Methanohydrogenales|Rice Cluster II", otus_Ar_ReAb$taxonomy, ignore.case=TRUE, invert=FALSE), ] 
+
+```
+
+#aggregate to family level
+```{r}
+
+#tax_tem_ar=otus_Ar_ReAb[,631:638]
+Cotus_methanogens = unite(Cotus_methanogens, Ord_Fam, c(Order, Family), remove=FALSE)
+Cotus_methanogens_Fam=transform(aggregate(x=Cotus_methanogens[,1:(ncol(Cotus_methanogens)-9)],by=list(Cotus_methanogens$Ord_Fam),FUN='sum'), row.names=Group.1,Group.1=NULL)
+name=c(colnames(Cotus_methanogens[,1:(ncol(Cotus_methanogens)-9)]))
+colnames(Cotus_methanogens_Fam)<-name
+```
+
+#choose the top4 family
+```{r}
+Cotus_methanogens_Fam$sum=apply(Cotus_methanogens_Fam[,1:630], 1, sum)
+Cotus_methanogens_Fam$max=apply(Cotus_methanogens_Fam[,1:630], 1, max)
+#order by sum, sort by sum is used since it is more clear
+Cotus_methanogens_Fam=Cotus_methanogens_Fam[order(Cotus_methanogens_Fam$sum, decreasing = TRUE),]
+Cotus_methanogens_Fam$Ord_Fam=rownames(Cotus_methanogens_Fam)
+Cotus_methanogens_Fam=separate(Cotus_methanogens_Fam,Ord_Fam,sep = "_",into = c("Order", "Family"))
+Cotus_methanogens_Fam_top4=Cotus_methanogens_Fam[1:4,]
+```
+
+#transform, make OTUs as the cloumn and samples as rows,
+```{r}
+Cotus_methanogens_Fam_top4=as.data.frame(t(Cotus_methanogens_Fam_top4[,1:630]))
+Cotus_methanogens_Fam_top4=transform(merge(Cotus_methanogens_Fam_top4,map_file, by='row.names',sort=F, all.x=TRUE),row.names=Row.names, Row.names=NULL)
+```
+
+#separate data by sites
+
+#M1
+```{r}
+Fam_site=Cotus_methanogens_Fam_top4[grep("M1", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE),]
+Fam_site=Fam_site[,c(1,2,3,4,8,10,12)]
+```
+
+#M2
+```{r}
+Fam_site=Cotus_methanogens_Fam_top4[grep("M2", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE),]
+Fam_site=Fam_site[,c(1,2,3,4,8,10,12)]
+```
+
+#M3
+```{r}
+Fam_site=Cotus_methanogens_Fam_top4[grep("M3", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE),]
+Fam_site=Fam_site[,c(1,2,3,4,8,10,12)]
+```
+
+#N1
+```{r}
+Fam_site=Cotus_methanogens_Fam_top4[grep("N1", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE),]
+Fam_site=Fam_site[,c(1,2,3,4,8,10,12)]
+```
+
+#N2
+```{r}
+Fam_site=Cotus_methanogens_Fam_top4[grep("N2", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE),]
+Fam_site=Fam_site[,c(1,2,3,4,8,10,12)]
+```
+
+#N3
+```{r}
+Fam_site=Cotus_methanogens_Fam_top4[grep("N3", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE),]
+Fam_site=Fam_site[,c(1,2,3,4,8,10,12)]
+```
+
+#OW1
+```{r}
+Fam_site=Cotus_methanogens_Fam_top4[grep("OW1", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE),]
+Fam_site=Fam_site[,c(1,2,3,4,8,10,12)]
+```
+
+#OW2
+```{r}
+Fam_site=Cotus_methanogens_Fam_top4[grep("OW2", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE),]
+Fam_site=Fam_site[,c(1,2,3,4,8,10,12)]
+```
+
+#OW3
+```{r}
+Fam_site=Cotus_methanogens_Fam_top4[grep("OW3", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE),]
+Fam_site=Fam_site[,c(1,2,3,4,8,10,12)]
+```
+
+#T1
+```{r}
+Fam_site=Cotus_methanogens_Fam_top4[grep("T1", colnames(Cotus_methanogens), ignore.case=TRUE, invert=FALSE),]
+Fam_site=Fam_site[,c(1,2,3,4,8,10,12)]
+```
+
+
+#total
+```{r}
+Cotus_methanogens_Fam_top4=Cotus_methanogens_Fam_top4[,c(1,2,3,4,8,9,10,12)]
+#M1_level5_archM<-melt(Cotus_methanogens_Fam_top4,id.vars=c("month","depth","core", "ecosite"))
+
+M1_level5_archM=gather(Cotus_methanogens_Fam_top4, key="variable", value = "value",  -month, -depth, -core, -ecosite, factor_key= TRUE)
+
+summarized_arch_for_alluvial<- group_by(M1_level5_archM, month, ecosite, depth, variable) %>% summarise(mean=mean(value))
+
+summarized_arch_for_alluvial=summarized_arch_for_alluvial[grep("D1|D3|D6", summarized_arch_for_alluvial$depth,ignore.case=TRUE, invert=FALSE),]
+
+#summarized_arch_for_alluvial =summarized_arch_for_alluvial [summarized_arch_for_alluvial$depth==c("D1","D3","D6"), ]
+
+summarized_arch_for_alluvial$month<-factor(summarized_arch_for_alluvial$month,levels=c("May","June","July","Aug","Sept"))
+```
+
+```{r}
+p=ggplot(data = summarized_arch_for_alluvial, 
+       aes(x = month, y = mean, alluvium = variable)) +
+  geom_alluvium(aes(fill = variable, colour = variable),alpha = .75, decreasing = FALSE) +
+    theme_bw() +
+  theme(axis.text.x = element_text(angle = -30, hjust = 0)) +
+  scale_fill_brewer(type = "qual", palette = "Set3") +
+  scale_color_brewer(type = "qual", palette = "Set3") +
+  facet_grid(depth~ecosite, scales = "fixed") +theme(legend.position="bottom")+
+  ggtitle("Ecosites-methanogens dynamics") #change title
+
+p
+```
+```{r}
+ggsave(p,filename = "Alluvial_plot_ALLsites_methanogens.pdf", units = "in",height = 10, width = 16)
+```
+
+
+
+#y=time, xl=depth (xs=relative abundance)
+#from Adrienne
+
+```{r}
+M1_level5_archM<-melt(Fam_site,id.vars=c("month","depth","core"))
+
+summarized_arch_for_alluvial<-as.data.frame(group_by(M1_level5_archM,variable,month,depth)%>%summarize(mean=mean(value)))
+
+summarized_arch_for_alluvial$month<-factor(summarized_arch_for_alluvial$month,levels=c("May","June","July","Aug","Sept"))
+
+```
+#choose subset for plotting depends on data completeness
+```{r}
+#M1, M3, N1, N2, N3, OW1, OW2, OW3, T1
+summarized_arch_for_alluvial=summarized_arch_for_alluvial[summarized_arch_for_alluvial$depth==c("D1","D3","D6"), ] #1,3,6 dataset is full for all month
+```
+
+```{r}
+#M2, 
+summarized_arch_for_alluvial=summarized_arch_for_alluvial[summarized_arch_for_alluvial$depth==c("D1","D3","D5"), ] #1,3,6 dataset is full for all month
+```
+
+
+# try the ggalluvial
+#https://cran.r-project.org/web/packages/ggalluvial/vignettes/ggalluvial.html
+```{r}
+p=ggplot(data = summarized_arch_for_alluvial, 
+       aes(x = month, y = mean, alluvium = variable)) +
+  geom_alluvium(aes(fill = variable, colour = variable),alpha = .75, decreasing = FALSE) +
+    theme_bw() +
+  theme(axis.text.x = element_text(angle = -30, hjust = 0)) +
+  scale_fill_brewer(type = "qual", palette = "Set3") +
+  scale_color_brewer(type = "qual", palette = "Set3") +
+  facet_wrap(~ depth, scales = "fixed",3) +
+  ggtitle("Ecosite-T1-methanogens dynamics") #change title
+#M1, M2, M3, N1, N2,N3, OW1, OW2
+#scale_x_continuous(breaks = seq(2003, 2013, 2)) +
+```
+```{r}
+ggsave(p,filename = "Alluvial_plot_T1_methanogens.pdf", units = "in",height = 10, width = 10)
+```
+
+```{r}
+ggplot(summarized_methanogens_for_alluvial_just136,aes(x=timepoint,y=mean,alluvium=taxon_short))+geom_alluvium(aes(fill = taxon_short, colour = taxon_short),alpha = .75, decreasing = FALSE)+scale_fill_manual(values=colors)+scale_color_manual(values=colors)+facet_grid(depth~.)+xlab(“”)+ylab(“mean relative abundance”)+theme_bw()+theme(legend.title = element_blank())+geom_flow()
+```
+
+#ridgeline plot, joyplot
+x for time, y for relative abundance, Depth by each pane/layer, color for taxa,
+
+#when we got this, try to smaller ASV level, with the three top family, alluvial plot
+separate by sites
+x, month, y relative abundance, stack depth
+```{r}
+
+```
+
+
+
+
+#pheatmap plotting on family level
+
+
+#
+```{r}
+#based on old alluvial package, not nice
+
+arch_D1<-subset(summarized_arch_for_alluvial,depth=="D1")[,c(1,2,4)]
+arch_D2<-subset(summarized_arch_for_alluvial,depth=="D2")[,c(1,2,4)]
+arch_D3<-subset(summarized_arch_for_alluvial,depth=="D3")[,c(1,2,4)]
+arch_D4<-subset(summarized_arch_for_alluvial,depth=="D4")[,c(1,2,4)]
+arch_D5<-subset(summarized_arch_for_alluvial,depth=="D5")[,c(1,2,4)]
+arch_D6<-subset(summarized_arch_for_alluvial,depth=="D6")[,c(1,2,4)]
+alluvial_ts(arch_D1, wave = 1.0, ygap = 4, lwd = 1, alpha = 0.7, rankup = FALSE, plotdir = "up", grid=TRUE, border = "dark grey", xmargin = 01.0, lab.cex = 0.8)
+alluvial_ts(arch_D2, wave = 1.0, ygap = 4, lwd = 1, alpha = 0.7, rankup = FALSE, plotdir = "up", grid=TRUE, border = "dark grey", xmargin = 01.0, lab.cex = 0.8)
+alluvial_ts(arch_D3, wave = 1.0, ygap = 4, lwd = 1, alpha = 0.7, rankup = FALSE, plotdir = "up", grid=TRUE, border = "dark grey", xmargin = 01.0, lab.cex = 0.8)
+alluvial_ts(arch_D4, wave = 1.0, ygap = 4, lwd = 1, alpha = 0.7, rankup = FALSE, plotdir = "up", grid=TRUE, border = "dark grey", xmargin = 01.0, lab.cex = 0.8)
+alluvial_ts(arch_D5, wave = 1.0, ygap = 4, lwd = 1, alpha = 0.7, rankup = FALSE, plotdir = "up", grid=TRUE, border = "dark grey", xmargin = 01.0, lab.cex = 0.8)
+alluvial_ts(arch_D6, wave = 1.0, ygap = 4, lwd = 1, alpha = 0.7, rankup = FALSE, plotdir = "up", grid=TRUE, border = "dark grey", xmargin = 01.0, lab.cex = 0.8)
+
+```
