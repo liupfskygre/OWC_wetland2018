@@ -12,6 +12,7 @@
     1. PCA-heatmap
     
     1. functional target specific ploting()
+        
         a. alluvial plot at family level
         
         b. heatmap at ASV level
@@ -28,9 +29,14 @@
 
 1. linking biogeochemical data
     1. bray distance-adonis (PERMANOVA) #https://rpubs.com/collnell/manova
+    
+    1. correlation heatmap?
 
 1. modeling
     1. Random forest analysis
+        
+        a. Random Forest (RF) model was generated in the R ‘randomForest’ package 
+    
     
     1. PLS regression , 
     
@@ -41,5 +47,8 @@
     1. sPLS regression,
 
 
-1. 
+1. interaction
+    1. co-occurrence networks 
+    
+    1. 
 
