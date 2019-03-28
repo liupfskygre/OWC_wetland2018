@@ -13,9 +13,11 @@
     
     1. functional target specific ploting()
         a. alluvial plot at family level
+        
         b. heatmap at ASV level
     
     1. indicator species analysis (ISA)
+        
         a. *indicspecies* package of R to obtain the indicator species at OTU level 
 
 1. statistic test
