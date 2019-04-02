@@ -173,7 +173,7 @@ Cotus_methanotroph_f = unite(Cotus_methanotroph_f, Ord_Fam, c(Order, Family), re
 map_file_D <- map_file[grep("May", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
 
 otus_D <- Cotus_methanotroph_f[, grep("May|taxonomy|Ord_Fam|Order|Family|Genus", colnames(Cotus_methanotroph_f), ignore.case=TRUE, invert=FALSE)]
-otus_D= otus_D[apply(otus_D[ ,1:(ncol(otus_D)-5)], 1, max)>=0.1,] #0.1% is mess
+otus_D= otus_D[apply(otus_D[ ,1:(ncol(otus_D)-5)], 1, max)>=0.01,] #0.1% is mess
 otus_D$sum=apply(otus_D[,1:(ncol(otus_D)-5)], 1, sum)
 otus_D$max=apply(otus_D[,1:(ncol(otus_D)-6)], 1, max)
 

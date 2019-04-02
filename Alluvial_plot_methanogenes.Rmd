@@ -247,8 +247,7 @@ p=ggplot(data = summarized_arch_for_alluvial,
   theme(axis.text.x = element_text(angle = -30, hjust = 0)) +
   scale_fill_brewer(type = "qual", palette = "Set3") +
   scale_color_brewer(type = "qual", palette = "Set3") +
-  facet_grid(depth~ecosite, scales = "fixed") +theme(legend.position="bottom")+
-  ggtitle("Ecosites-methanogens dynamics") #change title
+  facet_grid(depth~ecosite, scales = "fixed") +theme(legend.position="bottom")+theme(legend.text = element_text( size = 12))+ ggtitle("Ecosites-methanogens dynamics") #change title
 
 p
 ```

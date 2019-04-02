@@ -1,0 +1,209 @@
+---
+title: "Alluvial_plot_wetland_methanotroph"
+author: "Liupf"
+date: "3/19/2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+#Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+#Methanogen by top three familes across all sites with month (alluvial plot)
+
+#Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+#purpose
+#Methanogen (row) by OTU across samples (columns)- sum the total and sort, so we can see most abundant bugs, fine do archaea. Can organize by months if too big to show
+
+```{r}
+
+```
+```{r}
+setwd("~/A_Wrighton_lab/Wetland_project/16SrRNA_ana_Adrienne")
+```
+#library
+```{r}
+library(phyloseq)
+library(ggplot2)
+library(RColorBrewer)
+library("factoextra")
+library("FactoMineR") # PCA function
+library("gplots") #heatmap
+library("vegan") # prcomp
+library('vegetarian') # normalize.rows function
+library(dplyr)
+library(tidyr)
+library(tibble)
+library(dendsort) #library(dendsort)
+library(pheatmap)
+library(ggalluvial)
+```
+
+#color code setup
+```{r}
+library(RColorBrewer)
+bluepal<-brewer.pal(6,"Blues") #open water
+orangepal<-brewer.pal(6,"Oranges") # mud
+greenpal1<-brewer.pal(6,"Greens") # Typha
+greenpal2<-brewer.pal(6,"YlGn") # Nelumbo
+pal<-c(orangepal[4], orangepal[5], orangepal[6], greenpal1[2], greenpal1[3], greenpal1[4], bluepal[4], bluepal[5], bluepal[6], greenpal2[6])
+
+
+```
+
+```
+
+```
+# read file
+```{r}
+wd<-read.delim("OWC2018sampling_water_depth_liupf1.txt",header=T,sep = "\t")
+ 
+```
+
+#total
+```{}
+Cotus_methanotroph_Fam_top3=Cotus_methanotroph_Fam_top3[,c(1,2,3,7,8,9,11)]
+#M1_level5_archM<-melt(Cotus_methanotroph_top3,id.vars=c("month","depth","core", "ecosite"))
+
+M1_level5_archM=gather(Cotus_methanotroph_Fam_top3, key="variable", value = "value",  -month, -depth, -core, -ecosite, factor_key= TRUE)
+
+summarized_arch_for_alluvial<- group_by(M1_level5_archM, month, ecosite, depth, variable) %>% summarise(mean=mean(value))
+
+summarized_arch_for_alluvial=summarized_arch_for_alluvial[grep("D1|D3|D6", summarized_arch_for_alluvial$depth,ignore.case=TRUE, invert=FALSE),]
+
+#summarized_arch_for_alluvial =summarized_arch_for_alluvial [summarized_arch_for_alluvial$depth==c("D1","D3","D6"), ]
+
+summarized_arch_for_alluvial$month<-factor(summarized_arch_for_alluvial$month,levels=c("May","June","July","Aug","Sept"))
+```
+
+```{r}
+wd$month<-factor(wd$month,levels=c("May","June","July","Aug","Sept"))
+wd$variable="depth"
+```
+
+```{r}
+p=ggplot(data = wd,  aes(x = month, y = W_depth_cm, alluvium = variable)) +
+  geom_alluvium(aes(fill = variable, colour = variable),alpha = .75, decreasing = FALSE) +
+    theme_bw() +
+  theme(axis.text.x = element_text(angle = -30, hjust = 0)) +
+  scale_fill_brewer(type = "qual", palette = "Set3") +
+  scale_color_brewer(type = "qual", palette = "Set3") +
+  facet_wrap(~Site,ncol=10) +theme(legend.position="bottom")+
+  ggtitle("Ecosites-covering water dynamics") #change title
+
+p
+
+```
+
+```{r}
+
+wd$month<-factor(wd$month,levels=c("May","June","July","Aug","Sept"))
+wd$variable="depth"
+```
+
+```{r}
+p1=ggplot(data = wd,  aes(x = month, y = W_depth_cm, alluvium = variable)) +
+  geom_alluvium(aes(fill = variable, colour = variable),alpha = .75, decreasing = FALSE) +
+    theme_bw() +
+  theme(axis.text.x = element_text(angle = -30, hjust = 0)) +
+  scale_fill_manual(values=NA) +scale_color_manual(values=c("gray30"))+
+  facet_wrap(~Site,ncol=10) +theme(legend.position="none")+
+  ggtitle("Ecosites-covering water dynamics") #change title
+
+
+p1
+```
+
+
+
+#save
+```{r}
+ggsave(p,filename = "Alluvial_plot_ALLsites_methanogens.pdf", units = "in",height = 10, width = 16)
+```
+
+
+
+#y=time, xl=depth (xs=relative abundance)
+#from Adrienne
+
+```{r}
+M1_level5_archM=gather(Fam_site, key="variable", value = "value",  -month, -depth, -core, -ecosite, factor_key= TRUE)
+
+summarized_arch_for_alluvial<- group_by(M1_level5_archM, month, ecosite, depth, variable) %>% summarise(mean=mean(value))
+
+summarized_arch_for_alluvial=summarized_arch_for_alluvial[grep("D1|D3|D6", summarized_arch_for_alluvial$depth,ignore.case=TRUE, invert=FALSE),]
+
+#summarized_arch_for_alluvial =summarized_arch_for_alluvial [summarized_arch_for_alluvial$depth==c("D1","D3","D6"), ]
+
+summarized_arch_for_alluvial$month<-factor(summarized_arch_for_alluvial$month,levels=c("May","June","July","Aug","Sept"))
+```
+#choose subset for plotting depends on data completeness
+```{r}
+#M1, M3, N1, N2, N3, OW1, OW2, OW3, T1
+#summarized_arch_for_alluvial=summarized_arch_for_alluvial[summarized_arch_for_alluvial$depth==c("D1","D3","D6"), ] #1,3,6 dataset is full for all month
+```
+
+```{r}
+#M2, 
+#summarized_arch_for_alluvial=summarized_arch_for_alluvial[summarized_arch_for_alluvial$depth==c("D1","D3","D5"), ] #1,3,6 dataset is full for all month
+```
+
+
+# try the ggalluvial
+#https://cran.r-project.org/web/packages/ggalluvial/vignettes/ggalluvial.html
+```{r}
+p=ggplot(data = summarized_arch_for_alluvial, 
+       aes(x = month, y = mean, alluvium = variable)) +
+  geom_alluvium(aes(fill = variable, colour = variable),alpha = .75, decreasing = FALSE) +
+    theme_bw() +
+  theme(axis.text.x = element_text(angle = -30, hjust = 0)) +
+  scale_fill_brewer(type = "qual", palette = "Set3") +
+  scale_color_brewer(type = "qual", palette = "Set3") +
+  facet_wrap(~ depth, scales = "fixed",3) +
+    ggtitle("Ecosite-T1-methanotroph dynamics") #change title
+#M1, M2, M3, N1, N2,N3, OW1, OW2
+#scale_x_continuous(breaks = seq(2003, 2013, 2)) +
+p
+```
+```{r}
+ggsave(p,filename = "Alluvial_plot_T1_Methanotroph.pdf", units = "in",height = 10, width = 10)
+```
+
+```{r}
+ggplot(summarized_methanogens_for_alluvial_just136,aes(x=timepoint,y=mean,alluvium=taxon_short))+geom_alluvium(aes(fill = taxon_short, colour = taxon_short),alpha = .75, decreasing = FALSE)+scale_fill_manual(values=colors)+scale_color_manual(values=colors)+facet_grid(depth~.)+xlab(“”)+ylab(“mean relative abundance”)+theme_bw()+theme(legend.title = element_blank())+geom_flow()
+```
+
+#ridgeline plot, joyplot
+x for time, y for relative abundance, Depth by each pane/layer, color for taxa,
+
+#when we got this, try to smaller ASV level, with the three top family, alluvial plot
+separate by sites
+x, month, y relative abundance, stack depth
+```{r}
+
+```
+
+
+
+
+#pheatmap plotting on family level
+
+
+#
+```{r}
+#based on old alluvial package, not nice
+
+arch_D1<-subset(summarized_arch_for_alluvial,depth=="D1")[,c(1,2,4)]
+arch_D2<-subset(summarized_arch_for_alluvial,depth=="D2")[,c(1,2,4)]
+arch_D3<-subset(summarized_arch_for_alluvial,depth=="D3")[,c(1,2,4)]
+arch_D4<-subset(summarized_arch_for_alluvial,depth=="D4")[,c(1,2,4)]
+arch_D5<-subset(summarized_arch_for_alluvial,depth=="D5")[,c(1,2,4)]
+arch_D6<-subset(summarized_arch_for_alluvial,depth=="D6")[,c(1,2,4)]
+alluvial_ts(arch_D1, wave = 1.0, ygap = 4, lwd = 1, alpha = 0.7, rankup = FALSE, plotdir = "up", grid=TRUE, border = "dark grey", xmargin = 01.0, lab.cex = 0.8)
+alluvial_ts(arch_D2, wave = 1.0, ygap = 4, lwd = 1, alpha = 0.7, rankup = FALSE, plotdir = "up", grid=TRUE, border = "dark grey", xmargin = 01.0, lab.cex = 0.8)
+alluvial_ts(arch_D3, wave = 1.0, ygap = 4, lwd = 1, alpha = 0.7, rankup = FALSE, plotdir = "up", grid=TRUE, border = "dark grey", xmargin = 01.0, lab.cex = 0.8)
+alluvial_ts(arch_D4, wave = 1.0, ygap = 4, lwd = 1, alpha = 0.7, rankup = FALSE, plotdir = "up", grid=TRUE, border = "dark grey", xmargin = 01.0, lab.cex = 0.8)
+alluvial_ts(arch_D5, wave = 1.0, ygap = 4, lwd = 1, alpha = 0.7, rankup = FALSE, plotdir = "up", grid=TRUE, border = "dark grey", xmargin = 01.0, lab.cex = 0.8)
+alluvial_ts(arch_D6, wave = 1.0, ygap = 4, lwd = 1, alpha = 0.7, rankup = FALSE, plotdir = "up", grid=TRUE, border = "dark grey", xmargin = 01.0, lab.cex = 0.8)
+
+```

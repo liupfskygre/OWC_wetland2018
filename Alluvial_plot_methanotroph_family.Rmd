@@ -190,6 +190,8 @@ Cotus_methanotroph_Fam$Ord_Fam=rownames(Cotus_methanotroph_Fam)
 Cotus_methanotroph_Fam=separate(Cotus_methanotroph_Fam,Ord_Fam,sep = "_",into = c("Order", "Family"))
 Cotus_methanotroph_Fam_top3=Cotus_methanotroph_Fam[1:3,]
 ```
+
+
 #transform, make OTUs as the cloumn and samples as rows,
 ```{r}
 Cotus_methanotroph_Fam_top3=as.data.frame(t(Cotus_methanotroph_Fam_top3[,1:630]))
@@ -283,8 +285,8 @@ p=ggplot(data = summarized_arch_for_alluvial,
   theme(axis.text.x = element_text(angle = -30, hjust = 0)) +
   scale_fill_brewer(type = "qual", palette = "Set3") +
   scale_color_brewer(type = "qual", palette = "Set3") +
-  facet_grid(depth~ecosite, scales = "fixed") +theme(legend.position="bottom")+
-  ggtitle("Ecosites-methanogens dynamics") #change title
+  facet_grid(depth~ecosite, scales = "fixed") +theme(legend.position="bottom")+theme(legend.position="bottom")+theme(legend.text = element_text( size = 12))
+  ggtitle("Ecosites-methanotroph dynamics") #change title
 
 p
 ```

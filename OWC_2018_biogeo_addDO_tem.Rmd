@@ -1,0 +1,328 @@
+---
+title: "OWC_biogeochemical_data"
+author: "Liupf"
+date: "3/23/2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+#combine biogeochmical data from May to Sept, 2018
+#sources: the latest update: dropbox
+#https://www.dropbox.com/home/w2-microbiome/5.%20Projects/Wetlands/OWC_2018_campaign_data/OWC%202018_%20Geochem_O2_GPS_Temp_data
+
+#Adrienne data with meta data: 
+/Users/pengfeiliu/A_Wrighton_lab/Wetland_project/16SrRNA_ana_Adrienne/geochemical_data_Adrienne_with_metadata
+
+#recheck both campaign record, Adrienne used metafile and biogeochemical sample names, also DNA extraction list
+1. D5/D6, e.g., May_M2-C1-D6-A used in all the place (original campaign records, DNA extract, Adrienne list) except in OWC%202018_%20Geochem_O2_GPS_Temp_data, which is the latest (May_M2-C1-D5-A)? 
+
+1. make a record, use what Adrienne used first, then ask Reb to confirm.
+
+1, for july and sept, use -A to link C1, -B or -C is just for DO and temp measurement, no cores were taken
+
+#make a copy to 
+#bd set to zero OWC_2018_ Geochem_O2_GPS_Temp_data
+
+```{r }
+setwd("/Users/pengfeiliu/A_Wrighton_lab/Wetland_project/16SrRNA_ana_Adrienne/OWC_2018_ Geochem_O2_GPS_Temp_data")
+
+```
+
+```{r}
+library(tidyverse)
+library(dplyr)
+library(tidyr)
+library(vegan)
+
+```
+#May
+```{r}
+#all other biogeochemical data
+Biogeo=read.delim("May_2018_geochem_AN_liupf1.txt",header=T, sep = "\t", check.names=FALSE)
+
+#Temperature data
+tem <- read.delim("May2018_temp_data_liupf1.txt",header=T, sep = "\t", check.names=FALSE)
+tem_L=gather(tem, key="ecosite", value = "Tem", -Depth, -Replicates, factor_key= TRUE)
+tem_Lf = unite(tem_L, Sample, c(ecosite, Depth, Replicates), remove=FALSE, sep="-")
+tem_Lf$Sample = gsub("water-", "water", tem_Lf$Sample)
+temp = data.frame(Sample=tem_Lf$Sample,Tem=tem_Lf$Tem)
+
+temp_mapping= temp[grep("D1|D3|D6|water", temp$Sample, ignore.case=TRUE, invert=FALSE), ]
+
+Biogeo=merge(Biogeo, temp_mapping, by="Sample", all=TRUE, sort=FALSE)
+
+DO <- read.delim("May2018_DO_data_liupf1.txt",header=T, sep = "\t", check.names=FALSE)
+DO_L=gather(DO, key="ecosite", value = "DO", -Depth, -Replicates, factor_key= TRUE)
+DO_Lf = unite(DO_L, Sample, c(ecosite, Depth, Replicates), remove=FALSE, sep="-")
+DO_Lf$Sample = gsub("water-", "water", DO_Lf$Sample)
+DOp = data.frame(Sample=DO_Lf$Sample,DO=DO_Lf$DO)
+DOp_mapping= DOp[grep("D1|D3|D6|water", DOp$Sample, ignore.case=TRUE, invert=FALSE), ]
+
+Biogeo=merge(Biogeo, DOp_mapping, by="Sample", all=TRUE, sort=FALSE)
+
+write.table(Biogeo,"May2018_biogeo_full_v0.txt", sep="\t", row.names=FALSE, quote = FALSE)
+
+Biogeo <- data.frame(lapply(Biogeo, function(x) {gsub("bd", "NA", x)}))
+Biogeo <- data.frame(lapply(Biogeo, function(x) {gsub("nd", "NA", x)}))
+Biogeo=Biogeo[grep("water", Biogeo$Sample, ignore.case=TRUE, invert=TRUE), ]
+write.table(Biogeo,"May2018_biogeo_full_nowater.txt", sep="\t", row.names=FALSE, quote = FALSE)
+Biogeo$DO="NA" #DO in May is not used
+Biogeo_May=Biogeo #for May
+```
+
+#June
+# In June, we just have N3, OW2 and M1 DNA extracted
+```{r}
+#all other biogeochemical data
+Biogeo=read.delim("June_2018_geochem_AN_liupf1.txt",header=T, sep = "\t", check.names=FALSE)
+Biogeo=Biogeo[grep("-W-", Biogeo$Sample, ignore.case=TRUE, invert=TRUE), ]
+
+#Temperature data
+tem <- read.delim("June2018_temp_data_liupf1.txt",header=T, sep = "\t", check.names=FALSE)
+tem_L=gather(tem, key="ecosite", value = "Tem", -Depth, -Replicates, factor_key= TRUE)
+tem_Lf = unite(tem_L, Sample, c(ecosite, Depth, Replicates), remove=FALSE, sep="-")
+#tem_Lf$Sample = gsub("water-", "water", tem_Lf$Sample)
+temp = data.frame(Sample=tem_Lf$Sample,Tem=tem_Lf$Tem)
+
+#remove -P and water samples
+temp=temp[grep("-P|-W-", temp$Sample, ignore.case=TRUE, invert=TRUE), ]
+
+#change samples, C2, C3 without rep
+temp=temp[grep("C2-D1-B|C3-D1-B|C2-D1-C|C3-D1-C|C2-D2-B|C3-D2-B|C2-D2-C|C3-D2-C|C2-D3-B|C3-D3-B|C2-D3-C|C3-D3-C|C2-D4-B|C3-D4-B|C2-D4-C|C3-D4-C|C2-D5-B|C3-D5-B|C2-D5-C|C3-D5-C|C2-D6-B|C3-D6-B|C2-D6-C|C3-D6-C", temp$Sample, ignore.case=TRUE, invert=TRUE), ]
+
+#remove -A in C2 and C3 sample names
+
+library(dplyr)
+#library('stringr')
+temp$B=temp$Sample
+#temp$C=temp$Sample
+temp$D=temp$Sample
+temp %>% mutate(B = ifelse(grepl("-C2-|-C3-",Sample),"Rep",B))->temp
+#temp %>% mutate(C = ifelse(grepl("-C1-",Sample),"xxx",C))->temp                  
+temp=temp %>% mutate(D = ifelse(grepl("-C2-|-C3-",D),gsub("-A", "", temp$D),D))
+temp=temp %>%mutate(Sample=if_else(B=="Rep", D,as.character(Sample)))
+
+#temp$Sample3 = ifelse(temp$B=="Rep",temp$D, ifelse(temp$C=="xxx",temp$Sample, NA))
+#match DNA-bio mapping file
+temp_mapping= temp[,c(1,2)]
+  #data.frame(temp$Sample, temp$Tem)
+
+
+Biogeo=merge(Biogeo, temp_mapping, by="Sample", all.x =TRUE, all.y=FALSE ,sort=FALSE)
+Biogeo$DO=NA
+
+#write.table(Biogeo,"June2018_biogeo_full_v0.txt", sep="\t", row.names=FALSE, quote = FALSE)
+
+Biogeo <- data.frame(lapply(Biogeo, function(x) {gsub("bd", "NA", x)}))
+Biogeo <- data.frame(lapply(Biogeo, function(x) {gsub("nd", "NA", x)}))
+#remove water samples
+#Biogeo=Biogeo[grep("water", Biogeo$Sample, ignore.case=TRUE, invert=TRUE), ]
+write.table(Biogeo,"June2018_biogeo_full_nowater.txt", sep="\t", row.names=FALSE, quote = FALSE)
+
+Biogeo_June=Biogeo #for June
+
+```
+
+#July: assign -A samples valuse to C1 core
+
+```{r}
+#all other biogeochemical data
+Biogeo=read.delim("July_2018_geochem_AN_liupf1.txt",header=T, sep = "\t", check.names=FALSE)
+Biogeo=Biogeo[grep("-W-", Biogeo$Sample, ignore.case=TRUE, invert=TRUE), ]
+
+#Temperature data
+tem <- read.delim("July2018_temp_data_liupf1.txt",header=T, sep = "\t", check.names=FALSE)
+tem_L=gather(tem, key="ecosite", value = "Tem", -Depth, -Replicates, factor_key= TRUE)
+tem_Lf = unite(tem_L, Sample, c(ecosite, Depth, Replicates), remove=FALSE, sep="-")
+#tem_Lf$Sample = gsub("water-", "water", tem_Lf$Sample)
+temp = data.frame(Sample=tem_Lf$Sample,Tem=tem_Lf$Tem)
+
+#remove -B, -P and water samples
+temp=temp[grep("-P|-W-|-B-", temp$Sample, ignore.case=TRUE, invert=TRUE), ]
+
+#
+temp_mapping= temp#[grep("D1|D3|D6|water", temp$Sample, ignore.case=TRUE, invert=FALSE), ]
+
+Biogeo=merge(Biogeo, temp_mapping, by="Sample", all.x=TRUE, all.y=FALSE, sort=FALSE)
+
+
+#DO data for July
+DO <- read.delim("July2018_DO_data_liupf1.txt",header=T, sep = "\t", check.names=FALSE)
+DO_L=gather(DO, key="ecosite", value = "DO", -Depth, -Replicates, factor_key= TRUE)
+DO_Lf = unite(DO_L, Sample, c(ecosite, Depth, Replicates), remove=FALSE, sep="-")
+#DO_Lf$Sample = gsub("water-", "water", DO_Lf$Sample)
+DOp = data.frame(Sample=DO_Lf$Sample,DO=DO_Lf$DO)
+#remove -B, -P and water samples
+DOp=DOp[grep("-P|-W-|-B-", DOp$Sample, ignore.case=TRUE, invert=TRUE), ]
+
+DOp_mapping= DOp#[grep("D1|D3|D6|water", DOp$Sample, ignore.case=TRUE, invert=FALSE), ]
+
+Biogeo=merge(Biogeo, DOp_mapping, by="Sample", all.x=TRUE, all.y=FALSE, sort=FALSE)
+
+Biogeo <- data.frame(lapply(Biogeo, function(x) {gsub("bd", "NA", x)}))
+Biogeo <- data.frame(lapply(Biogeo, function(x) {gsub("nd", "NA", x)}))
+#Biogeo=Biogeo[grep("water", Biogeo$Sample, ignore.case=TRUE, invert=TRUE), ]
+write.table(Biogeo,"July2018_biogeo_full_nowater.txt", sep="\t", row.names=FALSE, quote = FALSE)
+
+Biogeo_July=Biogeo #for July
+
+```
+
+#Aug
+
+```{r}
+#all other biogeochemical data
+Biogeo=read.delim("Aug_2018_geochem_AN_liupf1.txt",header=T, sep = "\t", check.names=FALSE)
+Biogeo=Biogeo[grep("-W-", Biogeo$Sample, ignore.case=TRUE, invert=TRUE), ]
+
+#Temperature data
+tem <- read.delim("Aug2018_temp_data_liupf1.txt",header=T, sep = "\t", check.names=FALSE)
+tem_L=gather(tem, key="ecosite", value = "Tem", -Depth, -Replicates, factor_key= TRUE)
+tem_Lf = unite(tem_L, Sample, c(ecosite, Depth, Replicates), remove=FALSE, sep="-")
+#tem_Lf$Sample = gsub("water-", "water", tem_Lf$Sample)
+temp = data.frame(Sample=tem_Lf$Sample,Tem=tem_Lf$Tem)
+
+#remove -P and water samples
+temp=temp[grep("-P|-W-", temp$Sample, ignore.case=TRUE, invert=TRUE), ]
+
+#change samples, C2, C3 without rep
+temp=temp[grep("C2-D1-B|C3-D1-B|C2-D1-C|C3-D1-C|C2-D2-B|C3-D2-B|C2-D2-C|C3-D2-C|C2-D3-B|C3-D3-B|C2-D3-C|C3-D3-C|C2-D4-B|C3-D4-B|C2-D4-C|C3-D4-C|C2-D5-B|C3-D5-B|C2-D5-C|C3-D5-C|C2-D6-B|C3-D6-B|C2-D6-C|C3-D6-C", temp$Sample, ignore.case=TRUE, invert=TRUE), ]
+
+#remove -A in C2 and C3 sample names
+
+library(dplyr)
+#library('stringr')
+temp$B=temp$Sample
+#temp$C=temp$Sample
+temp$D=temp$Sample
+temp %>% mutate(B = ifelse(grepl("-C2-|-C3-",Sample),"Rep",B))->temp
+#temp %>% mutate(C = ifelse(grepl("-C1-",Sample),"xxx",C))->temp                  
+temp=temp %>% mutate(D = ifelse(grepl("-C2-|-C3-",D),gsub("-A", "", temp$D),D))
+temp=temp %>%mutate(Sample=if_else(B=="Rep", D,as.character(Sample)))
+
+#temp$Sample3 = ifelse(temp$B=="Rep",temp$D, ifelse(temp$C=="xxx",temp$Sample, NA))
+#match DNA-bio mapping file
+temp_mapping= temp[,c(1,2)]
+  #data.frame(temp$Sample, temp$Tem)
+
+Biogeo=merge(Biogeo, temp_mapping, by="Sample", all.x =TRUE, all.y=FALSE ,sort=FALSE)
+
+#DO data
+DO <- read.delim("Aug2018_DO_data_liupf1.txt",header=T, sep = "\t", check.names=FALSE)
+DO_L=gather(DO, key="ecosite", value = "DO", -Depth, -Replicates, factor_key= TRUE)
+DO_Lf = unite(DO_L, Sample, c(ecosite, Depth, Replicates), remove=FALSE, sep="-")
+#DO_Lf$Sample = gsub("water-", "water", DO_Lf$Sample)
+DOp = data.frame(Sample=DO_Lf$Sample,DO=DO_Lf$DO)
+
+#remove -P and water samples
+DOp=DOp[grep("-P|-W-", DOp$Sample, ignore.case=TRUE, invert=TRUE), ]
+
+#change samples, C2, C3 without rep
+DOp=DOp[grep("C2-D1-B|C3-D1-B|C2-D1-C|C3-D1-C|C2-D2-B|C3-D2-B|C2-D2-C|C3-D2-C|C2-D3-B|C3-D3-B|C2-D3-C|C3-D3-C|C2-D4-B|C3-D4-B|C2-D4-C|C3-D4-C|C2-D5-B|C3-D5-B|C2-D5-C|C3-D5-C|C2-D6-B|C3-D6-B|C2-D6-C|C3-D6-C", DOp$Sample, ignore.case=TRUE, invert=TRUE), ]
+
+#remove -A in C2 and C3 sample names
+
+library(dplyr)
+#library('stringr')
+DOp$B=DOp$Sample
+#DOp$C=DOp$Sample
+DOp$D=DOp$Sample
+DOp %>% mutate(B = ifelse(grepl("-C2-|-C3-",Sample),"Rep",B))->DOp
+#DOp %>% mutate(C = ifelse(grepl("-C1-",Sample),"xxx",C))->DOp                  
+DOp=DOp %>% mutate(D = ifelse(grepl("-C2-|-C3-",D),gsub("-A", "", DOp$D),D))
+DOp=DOp %>%mutate(Sample=if_else(B=="Rep", D,as.character(Sample)))
+
+#DOp$Sample3 = ifelse(DOp$B=="Rep",DOp$D, ifelse(DOp$C=="xxx",DOp$Sample, NA))
+#match DNA-bio mapping file
+DOp_mapping= DOp[,c(1,2)]
+#DOp_mapping= DOp[grep("D1|D3|D6|water", DOp$Sample, ignore.case=TRUE, invert=FALSE), ]
+
+Biogeo=merge(Biogeo, DOp_mapping, by="Sample", all.x=TRUE, all.y=FALSE,sort=FALSE)
+
+#write.table(Biogeo,"Aug2018_biogeo_full_v0.txt", sep="\t", row.names=FALSE, quote = FALSE)
+
+Biogeo <- data.frame(lapply(Biogeo, function(x) {gsub("bd", "NA", x)}))
+Biogeo <- data.frame(lapply(Biogeo, function(x) {gsub("nd", "NA", x)}))
+write.table(Biogeo,"Aug2018_biogeo_full_nowater.txt", sep="\t", row.names=FALSE, quote = FALSE)
+
+Biogeo_Aug=Biogeo #for Aug
+
+```
+
+#Sept??? OW1-A, OW1-B?? which is OW1-C1
+
+```{r}
+#all other biogeochemical data
+Biogeo=read.delim("Sept_2018_geochem_AN_liupf1.txt",header=T, sep = "\t", check.names=FALSE)
+Biogeo=Biogeo[grep("-W-", Biogeo$Sample, ignore.case=TRUE, invert=TRUE), ]
+
+#Temperature data
+tem <- read.delim("Sept2018_temp_data_liupf1.txt",header=T, sep = "\t", check.names=FALSE)
+tem_L=gather(tem, key="ecosite", value = "Tem", -Depth, -Replicates, factor_key= TRUE)
+tem_Lf = unite(tem_L, Sample, c(ecosite, Depth, Replicates), remove=FALSE, sep="-")
+#tem_Lf$Sample = gsub("water-", "water", tem_Lf$Sample)
+temp = data.frame(Sample=tem_Lf$Sample,Tem=tem_Lf$Tem)
+
+#remove -B, -P and water samples
+temp=temp[grep("-P|-W-|-B-", temp$Sample, ignore.case=TRUE, invert=TRUE), ]
+
+#
+temp_mapping= temp#[grep("D1|D3|D6|water", temp$Sample, ignore.case=TRUE, invert=FALSE), ]
+
+Biogeo=merge(Biogeo, temp_mapping, by="Sample", all.x=TRUE, all.y=FALSE, sort=FALSE)
+
+
+#DO data for Sept
+DO <- read.delim("Sept2018_DO_data_liupf1.txt",header=T, sep = "\t", check.names=FALSE)
+DO_L=gather(DO, key="ecosite", value = "DO", -Depth, -Replicates, factor_key= TRUE)
+DO_Lf = unite(DO_L, Sample, c(ecosite, Depth, Replicates), remove=FALSE, sep="-")
+#DO_Lf$Sample = gsub("water-", "water", DO_Lf$Sample)
+DOp = data.frame(Sample=DO_Lf$Sample,DO=DO_Lf$DO)
+#remove -B, -P and water samples
+DOp=DOp[grep("-P|-W-|-B-", DOp$Sample, ignore.case=TRUE, invert=TRUE), ]
+
+DOp_mapping= DOp#[grep("D1|D3|D6|water", DOp$Sample, ignore.case=TRUE, invert=FALSE), ]
+
+Biogeo=merge(Biogeo, DOp_mapping, by="Sample", all.x=TRUE, all.y=FALSE, sort=FALSE)
+
+Biogeo <- data.frame(lapply(Biogeo, function(x) {gsub("bd", "NA", x)}))
+Biogeo <- data.frame(lapply(Biogeo, function(x) {gsub("nd", "NA", x)}))
+#Biogeo=Biogeo[grep("water", Biogeo$Sample, ignore.case=TRUE, invert=TRUE), ]
+write.table(Biogeo,"Sept2018_biogeo_full_nowater.txt", sep="\t", row.names=FALSE, quote = FALSE)
+
+Biogeo_Sept=Biogeo #for Sept
+```
+
+
+# May, June, Aug, Sept, (July??)
+#
+```{r}
+Biogeo_all=rbind(Biogeo_May,Biogeo_June,Biogeo_July,Biogeo_Aug,Biogeo_Sept)
+Biogeo_all = unite(Biogeo_all, Mon_Sample, c(month, Sample), remove=FALSE, sep="_")
+Biogeo_all$Sample =Biogeo_all$Mon_Sample
+Biogeo_all=Biogeo_all[,-1]
+
+write.table(Biogeo_all,"OWC2018_biogeo_all_full_nowater.txt", sep="\t", row.names=FALSE, quote = FALSE)
+#rename seven sample names to match 16SrRNA sample names (e.g. May_N3-C1-D6-A to May-N3-C1-D6-A)
+#Aug_ change to Aug-
+#Sept_ chenge to Sept-
+```
+
+```{r}
+Biogeo_all<-read.delim("OWC2018_biogeo_all_full_nowater_rename.txt",header=T,sep = "\t")
+#Biogeo_all = unite(Biogeo_all, Eco_depth, c(Ecosite, Core), remove=FALSE, sep="-")
+#map_file<-read.delim("map_file_clean_Cores.txt",header=T,sep = "\t",row.names = 1)
+map_file$Sample=row.names(map_file)
+MapBiogeo =merge(map_file, Biogeo_all, by="Sample", all.x=TRUE, all.y=FALSE, sort=FALSE)
+MapBiogeo = unite(MapBiogeo, Eco_depth, c(ecosite, depth), remove=FALSE, sep="-")
+
+Soil_pro = read.delim("OWC_soil_properties_12_2018_ecosys_cores_liupf.txt",header=T, sep = "\t", check.names=FALSE)
+  
+Map_Biogeo_Soil=merge(MapBiogeo, Soil_pro, by="Eco_depth", all.x=TRUE, all.y=FALSE, sort=FALSE)
+write.table(Map_Biogeo_Soil,"OWC2018_meta_Biogeo_Soil.txt", sep="\t", row.names=FALSE, quote = FALSE)
+
+#meta-biogeo-soil pro file
+MBGS<-read.delim("OWC2018_meta_Biogeo_Soil.txt",header=T,sep = "\t",row.names=1)
+```
+
+
