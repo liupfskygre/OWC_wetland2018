@@ -1,0 +1,173 @@
+---
+title: "Ridgelineplot plot"
+author: "Liupf"
+date: "4/13/2019"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+#references
+# https://www.data-to-viz.com/graph/ridgeline.html
+
+
+
+```{r}
+
+
+```
+
+#library
+```{r}
+library(ggridges)
+library(ggplot2)
+library(viridis)
+library(hrbrthemes)
+library(dplyr)
+library(tidyverse)
+library(ggalluvial)
+```
+
+
+
+```{r}
+setwd("~/A_Wrighton_lab/Wetland_project/16SrRNA_ana_Adrienne")
+```
+
+# read file
+```{r}
+map_file<-read.delim("map_file_clean_Cores.txt",header=T,row.names=1)
+otus<-read.delim("feature_table_w_tax_clean_Cores_ge10f.txt",header=T,row.names=1, check.names=FALSE) 
+taxa<-read.delim("filtered_ge10_trimmed_tax_tab.txt",header = T,row.names = 1) #tax_info, 
+```
+
+# add eco_dep column in the mapping file
+```{r}
+library(tidyr)
+map_file$ecosite1=gsub("1|2|3","",map_file$ecosite)
+map_file = unite(map_file, eco_dep, c(ecosite1, depth), remove=FALSE)
+map_file = map_file[order(map_file$eco_dep), ,drop=FALSE] #M (D1-D6), N, OW, T is the order
+```
+
+#separate Bacteria and archaea
+# data selction, separate Archea and Bacteria
+```{r}
+otus_Ba <- otus[grep("Bacteria", otus$taxonomy, ignore.case=TRUE, invert=FALSE), ]
+otus_Ar <- otus[grep("Archaea", otus$taxonomy, ignore.case=TRUE, invert=FALSE), ] 
+#map_file <- map_file[grep("Aug-|Aug_", row.names(map_file), ignore.case=TRUE, invert=FALSE),]
+#otus <- otus[, grep("Aug-|Aug_|taxonomy", colnames(otus), ignore.case=TRUE, invert=FALSE)]
+```
+
+
+#claculate relative abundances
+```{r}
+library(gtools)
+#bacteria
+otus_Ba_ReAb=sweep(otus_Ba[,1:(ncol(otus_Ba)-1)], 2, colSums(otus_Ba[,1:(ncol(otus_Ba)-1)]), FUN="/")
+otus_Ba_ReAb = otus_Ba_ReAb*100
+otus_Ba_ReAb$taxonomy= otus_Ba$taxonomy
+otus_Ba_ReAb=transform(merge(otus_Ba_ReAb,taxa, by='row.names',sort=F, all.x=TRUE),row.names=Row.names, Row.names=NULL)
+name=c(colnames(otus_Ar), colnames(taxa))
+
+otus_Ba_ReAb=na.omit(otus_Ba_ReAb)
+otus_Ba_ReAb$Genus <- sub("^$", "g_", otus_Ba_ReAb$Genus)
+otus_Ba_ReAb$Family <- sub("^$", "f_", otus_Ba_ReAb$Family)
+otus_Ba_ReAb$Order <- sub("^$", "o_", otus_Ba_ReAb$Order)
+otus_Ba_ReAb$Class <- sub("^$", "c_", otus_Ba_ReAb$Class)
+colnames(otus_Ba_ReAb)<-name
+```
+
+#archaea
+```{r}
+otus_Ar_ReAb=sweep(otus_Ar[,1:(ncol(otus_Ar)-1)], 2, colSums(otus_Ar[,1:(ncol(otus_Ar)-1)]), FUN="/")
+otus_Ar_ReAb = otus_Ar_ReAb*100
+otus_Ar_ReAb$taxonomy= otus_Ar$taxonomy
+otus_Ar_ReAb=transform(merge(otus_Ar_ReAb,taxa, by='row.names',sort=F, all.x=TRUE),row.names=Row.names, Row.names=NULL)
+name=c(colnames(otus_Ar), colnames(taxa))
+
+otus_Ar_ReAb=na.omit(otus_Ar_ReAb)
+otus_Ar_ReAb$Genus <- sub("^$", "g_", otus_Ar_ReAb$Genus)
+otus_Ar_ReAb$Family <- sub("^$", "f_", otus_Ar_ReAb$Family)
+otus_Ar_ReAb$Order <- sub("^$", "o_", otus_Ar_ReAb$Order)
+otus_Ar_ReAb$Class <- sub("^$", "c_", otus_Ar_ReAb$Class)
+colnames(otus_Ar_ReAb)<-name
+```
+
+#methanogens selection
+#go to silva to check we use the same "name" for searching
+https://www.arb-silva.de/search/
+
+```{r}
+
+Cotus_methanogens = otus_Ar_ReAb[grep("Methanomicrobia|Methanobacteria|Methanococci|Methanopyri|Methanomassiliicoccales|Methanofastidiosales|Methanonatronarchaeia|Methanoflorentaceae|Methanoflorens|Methanofastidiosa|Verstraetearchaeia|Verstraetearchaeota|Methanomethyliales|Methanohydrogenales|Rice Cluster II", otus_Ar_ReAb$taxonomy, ignore.case=TRUE, invert=FALSE), ] 
+
+```
+
+#aggregate to family level
+```{r}
+
+#tax_tem_ar=otus_Ar_ReAb[,631:638]
+Cotus_methanogens = unite(Cotus_methanogens, Ord_Fam, c(Order, Family), remove=FALSE)
+Cotus_methanogens_Fam=transform(aggregate(x=Cotus_methanogens[,1:(ncol(Cotus_methanogens)-9)],by=list(Cotus_methanogens$Ord_Fam),FUN='sum'), row.names=Group.1,Group.1=NULL)
+name=c(colnames(Cotus_methanogens[,1:(ncol(Cotus_methanogens)-9)]))
+colnames(Cotus_methanogens_Fam)<-name
+```
+
+#choose the top4 family
+```{r}
+Cotus_methanogens_Fam$sum=apply(Cotus_methanogens_Fam[,1:630], 1, sum)
+Cotus_methanogens_Fam$max=apply(Cotus_methanogens_Fam[,1:630], 1, max)
+#order by sum, sort by sum is used since it is more clear
+Cotus_methanogens_Fam=Cotus_methanogens_Fam[order(Cotus_methanogens_Fam$sum, decreasing = TRUE),]
+Cotus_methanogens_Fam$Ord_Fam=rownames(Cotus_methanogens_Fam)
+Cotus_methanogens_Fam=separate(Cotus_methanogens_Fam,Ord_Fam,sep = "_",into = c("Order", "Family"))
+Cotus_methanogens_Fam_top4=Cotus_methanogens_Fam[1:4,]
+```
+
+#transform, make OTUs as the cloumn and samples as rows,
+```{r}
+Cotus_methanogens_Fam_top4=as.data.frame(t(Cotus_methanogens_Fam_top4[,1:630]))
+Cotus_methanogens_Fam_top4=transform(merge(Cotus_methanogens_Fam_top4,map_file, by='row.names',sort=F, all.x=TRUE),row.names=Row.names, Row.names=NULL)
+```
+
+
+#total
+```{r}
+Cotus_methanogens_Fam_top4=Cotus_methanogens_Fam_top4[,c(1,2,3,4,8,9,10,12)]
+#M1_level5_archM<-melt(Cotus_methanogens_Fam_top4,id.vars=c("month","depth","core", "ecosite"))
+
+M1_level5_archM=gather(Cotus_methanogens_Fam_top4, key="variable", value = "value",  -month, -depth, -core, -ecosite, factor_key= TRUE)
+
+summarized_arch_for_alluvial<- group_by(M1_level5_archM, month, ecosite, depth, variable) %>% summarise(mean=mean(value))
+
+summarized_arch_for_alluvial=summarized_arch_for_alluvial[grep("D1|D3|D6", summarized_arch_for_alluvial$depth,ignore.case=TRUE, invert=FALSE),]
+
+#summarized_arch_for_alluvial =summarized_arch_for_alluvial [summarized_arch_for_alluvial$depth==c("D1","D3","D6"), ]
+
+summarized_arch_for_alluvial$month<-factor(summarized_arch_for_alluvial$month,levels=c("May","June","July","Aug","Sept"))
+```
+
+```{r}
+p=ggplot(data = summarized_arch_for_alluvial, 
+       aes(x = month, y = mean, alluvium = variable)) +
+  geom_alluvium(aes(fill = variable, colour = variable),alpha = .75, decreasing = FALSE) +
+    theme_bw() +
+  theme(axis.text.x = element_text(angle = -30, hjust = 0)) +
+  scale_fill_brewer(type = "qual", palette = "Set3") +
+  scale_color_brewer(type = "qual", palette = "Set3") +
+  facet_grid(depth~ecosite, scales = "fixed") +theme(legend.position="bottom")+theme(legend.text = element_text( size = 12))+ ggtitle("Ecosites-methanogens dynamics") #change title
+
+p
+```
+
+#https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html
+```{r}
+data: summarized_arch_for_alluvial
+
+ggplot(data=summarized_arch_for_alluvial, aes(x = month, y=group, height = mean,group=group,fill=variable)) +
+  geom_density_ridges2(stat = "identity", scale=1) +
+  theme_ridges() + 
+  theme(legend.position = "none")+
+  facet_grid(depth~ecosite, scales = "fixed") 
+
+#geom_ridgeline() +
+```
