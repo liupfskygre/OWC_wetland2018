@@ -61,7 +61,7 @@ wd<-read.delim("OWC2018sampling_water_depth_liupf1.txt",header=T,sep = "\t")
 ```
 
 #total
-```{}
+```{r}
 Cotus_methanotroph_Fam_top3=Cotus_methanotroph_Fam_top3[,c(1,2,3,7,8,9,11)]
 #M1_level5_archM<-melt(Cotus_methanotroph_top3,id.vars=c("month","depth","core", "ecosite"))
 
@@ -114,13 +114,73 @@ p1=ggplot(data = wd,  aes(x = month, y = W_depth_cm, alluvium = variable)) +
 p1
 ```
 
-
-
 #save
 ```{r}
 ggsave(p,filename = "Alluvial_plot_ALLsites_methanogens.pdf", units = "in",height = 10, width = 16)
 ```
 
+#water-depth, update by Yang Ju April9th-2019, M2 and M3
+```{r}
+setwd("~/A_Wrighton_lab/Wetland_project/16SrRNA_ana_Adrienne/OWC_water_depth")
+#update by Yang Ju April9th-2019, M2 and M3
+wd <- read.delim("water_depth_at_peepers_liupf_update9April.txt", sep="\t", header = T, check.names = F)
+
+wd_day <- wd %>% group_by(Date) %>% summarise_all(funs(mean))
+
+wd_day <-wd_day %>%mutate(Date = as.Date(Date, "%m/%d/%y")) %>% arrange(Date)
+wd_day <- wd_day %>% select(-DateTimeStamp, -time, -APM)
+
+wd_day_long <-wd_day %>% gather(key="sites", value = "water_dep", -Date)
+ 
+wd_day_long <- wd_day_long %>% mutate(month = format(Date, "%m"), year = format(Date, "%y")) 
+wd_day_long <- wd_day_long[wd_day_long$sites!="OWCOLWQ",]
+wd_day_long <- wd_day_long[wd_day_long$month!="04",]
+
+wd_day_long %>% mutate(month=replace(month, month=="05", "May"))  %>% mutate(month=replace(month, month=="08","Aug"))  %>%mutate(month=replace(month, month=="06","June"))  %>% mutate(month=replace(month, month=="09","Sept"))  %>%mutate(month=replace(month, month=="07","July"))  -> wd_day_long
+
+wd_day_long= unite(wd_day_long, eco_mon, c(sites, month), remove=FALSE)
+```
+
+#sampling date water depth and average
+```{r}
+mydates <- as.Date(c("2018-05-08","2018-05-09","2018-05-10","2018-06-11","2018-06-12","2018-06-13","2018-07-11","2018-07-12","2018-08-06","2018-08-07","2018-08-08","2018-08-09","2018-09-03","2018-09-04","2018-09-05"))
+sample_wd <- wd_day_long %>% filter(Date %in% mydates)
+
+sample_wd2 <- sample_wd %>% group_by(eco_mon) %>% summarise_all(funs(mean))
+sample_wd2 <-sample_wd2 %>% select(eco_mon,water_dep)
+sample_wd2 <- separate(sample_wd2, eco_mon, into=c("sites","month" ), remove =FALSE, sep = "_")
+
+sample_wd2$month<-factor(sample_wd2$month,levels=c("May","June","July","Aug","Sept"))
+sample_wd2$variable="depth"
+```
+
+```{r}
+p1=ggplot(data =sample_wd2,  aes(x = month, y =water_dep, alluvium = variable)) +
+  geom_alluvium(aes(fill = variable, colour = variable),alpha = .75, decreasing = FALSE) +
+    theme_bw() +
+  theme(axis.text.x = element_text(angle = -30, hjust = 0)) +
+  xlab("Month") + ylab("Water depth (meter)")+
+  scale_fill_manual(values=NA) +scale_color_manual(values=c("gray30"))+
+  facet_wrap(~sites,ncol=10) +theme(legend.position="none")+
+  ggtitle("Ecosites-covering water dynamics") #change title
+
+
+p1
+```
+
+#save
+```{r}
+ggsave(p1,filename = "Alluvial_plot_water_depth_update2019April.pdf", units = "in",height = 3, width = 16)
+```
+
+
+
+
+
+
+
+
+#pass
 
 
 #y=time, xl=depth (xs=relative abundance)
