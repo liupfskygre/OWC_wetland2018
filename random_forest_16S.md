@@ -13,6 +13,11 @@ https://docs.qiime2.org/2019.1/tutorials/sample-classifier/
 https://docs.qiime2.org/2019.1/plugins/available/sample-classifier/classify-samples/
 #Supervised learning methods predict sample data (e.g., metadata values) as a function of other sample data (e.g., microbiota composition). 
 
+https://jonlefcheck.net/2015/02/06/a-practical-guide-to-machine-learning-in-ecology/
+
+#a workflow
+https://bioconductor.org/help/course-materials/2017/BioC2017/Day1/Workshops/Microbiome/MicrobiomeWorkflowII.html
+
 
 #my question
 #which kind of ASV contribute most to the in-situ methane concentration??
