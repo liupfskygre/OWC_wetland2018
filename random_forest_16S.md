@@ -22,6 +22,8 @@ http://merenlab.org/2018/09/09/microbial-omics-workshop/#training-a-random-fores
 
 http://segatalab.cibio.unitn.it/tools/metaml/
 
+https://www.tutorialspoint.com/r/r_random_forest.htm
+
 #my question
 #which kind of ASV contribute most to the in-situ methane concentration??
 #extend, RF could use OTU data and base on classification or regression to predict metadata
