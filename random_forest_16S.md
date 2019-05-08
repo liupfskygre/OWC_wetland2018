@@ -12,6 +12,9 @@ https://docs.qiime2.org/2019.1/tutorials/sample-classifier/
 
 https://docs.qiime2.org/2019.1/plugins/available/sample-classifier/classify-samples/
 
+#my question
+#which kind of ASV contribute most to the in-situ methane concentration??
+#extend, RF could use OTU data and base on classification or regression to predict metadata
 
 **Random Forest Tutorial**
 
