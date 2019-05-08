@@ -18,6 +18,7 @@ https://jonlefcheck.net/2015/02/06/a-practical-guide-to-machine-learning-in-ecol
 #a workflow
 https://bioconductor.org/help/course-materials/2017/BioC2017/Day1/Workshops/Microbiome/MicrobiomeWorkflowII.html
 
+http://merenlab.org/2018/09/09/microbial-omics-workshop/#training-a-random-forest-regression-model
 
 #my question
 #which kind of ASV contribute most to the in-situ methane concentration??
