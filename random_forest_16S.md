@@ -8,6 +8,11 @@ http://userweb.eng.gla.ac.uk/umer.ijaz/projects/microbiomeSeq_Tutorial.html
 
 http://appliedpredictivemodeling.com/blog/2014/11/27/vpuig01pqbklmi72b8lcl3ij5hj2qm
 
+https://docs.qiime2.org/2019.1/tutorials/sample-classifier/
+
+https://docs.qiime2.org/2019.1/plugins/available/sample-classifier/classify-samples/
+
+
 **Random Forest Tutorial**
 
 Gavin Douglas edited this page on May 23, 2017 · 6 revisions
