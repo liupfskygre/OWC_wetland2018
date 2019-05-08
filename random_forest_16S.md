@@ -20,6 +20,8 @@ https://bioconductor.org/help/course-materials/2017/BioC2017/Day1/Workshops/Micr
 
 http://merenlab.org/2018/09/09/microbial-omics-workshop/#training-a-random-forest-regression-model
 
+http://segatalab.cibio.unitn.it/tools/metaml/
+
 #my question
 #which kind of ASV contribute most to the in-situ methane concentration??
 #extend, RF could use OTU data and base on classification or regression to predict metadata
