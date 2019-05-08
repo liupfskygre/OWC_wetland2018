@@ -18,23 +18,36 @@ First Created: 7 March 2017
 Last Edited: 23 May 2017
 
 **Introduction**
-Requirements
-Other Resources
-Background
-Load Packages and Read in Data
-Pre-processing
-Removing Rare Features
-Transforming Your Data
-Assessing Model Fit
-Identifying Important Features
-Introduction
+
+**Requirements**
+
+**Other Resources**
+
+**Background**
+
+**Load Packages and Read in Data**
+
+**Pre-processing**
+
+**Removing Rare Features**
+
+**Transforming Your Data**
+
+**Assessing Model Fit**
+
+**Identifying Important Features**
+
+**Introduction**
+
 This tutorial is intended to teach beginners the basics of running random forest (RF) models on microbial sequencing data. Users may also be interested in MetAML, which implements RF along with other machine learning techniques with a simple workflow for metagenomic data. Importantly, the below commands are not the best practices for all datasets. An important part of data analysis is determining what approaches would be best for your particular problem. However, as shall be described below, it's easy to create biased models if you select parameters based on observations you made while exploring your data.
 
 Often when running machine learning tools you would split up your samples into a training set (often ~70%) to build your model and a test set (often ~30%) to evaluate your model. Partitioning allows an estimate of the model performance to be inferred on different data than was used to train the model. When sample sizes are large enough researchers sometimes create a third partition, the validation set, which is used to select (or tune) parameters for the model. However, often in microbial datasets sample sizes are small (e.g. often in the range of 10-50 samples), in which case alternative approaches need to be taken. Cross-validation, where different subsets of your data are systematically split into training and test sets to estimate model performance, is a family of approaches to get around this problem (a few examples are shown in this blog post). Often this actually isn't necessary for RF models given the internal measure of out-of-bag error which is calculated for each model (described below).
 
 The below tutorial will focus on a dataset of 40 samples, where partitioning the data into training and test sets would not be helpful. Operational taxonomic unit (OTU) relative abundances are the features of this dataset. All samples have inflammation scores (IS) associated with them (ranging from 0-1). Samples with IS >= 0.5 were grouped as inflamed, while those with a value < 0.5 were put in the control group. This means that each sample has an inflammation category and a quantitative value associated with it, which will allow us to try running RF classification and regression models using the same features. Note that this example dataset was simulated for this tutorial.
 
-Requirements
+**Requirements**
+
+```
 You will need the below data and R packages to run all the commands in this tutorial. I have also noted the version of each package that I was using for this tutorial. You shouldn't need to use exactly the same versions as I did, but be aware that there could be updates to these packages since this tutorial was posted.
 ```
 
@@ -57,6 +70,7 @@ caret: an R package that wraps many machine learning and other predictive tools.
 ```
 
 **Background**
+
 ```
 RF models are run when researchers are interested in classifying samples into categories (called classes) of interest based upon many different variables, such as taxa, functional categories, etc (called features). RF can also be used to regress features against quantitative data (e.g. height in cm rather than splitting samples into categorical groups like short and tall).
 
